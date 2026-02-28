@@ -71,6 +71,10 @@ The **Armed Conflict Location & Event Data Project** (ACLED) is a high-frequency
 
 **Mediacloud** is an open-source platform for media analysis. Containing a large variety of curated databases spanning social media, news articles, and press releases, the collection of databases is highly searchable. The Mediacloud API can be used to search temporally and by keyword to return hits with context for use in natural language processing, as well as performing frequency analysis. The homogenation of search syntax allows for many disparate news sources to be search and collated simultaneously, making it ideal for imputation context additions. [@roberts2021mediacloud]
 
+```{r package_install, include=FALSE}
+remotes::install_github("https://github.com/r-forge/countreg", subdir="pkg")
+install.packages("topmodels", repos = "https://R-Forge.R-project.org")
+```
 ```{r setup, include=FALSE}
 ## Libraries
 library(lmtest)   # LM comparison
@@ -95,8 +99,9 @@ library(caret)    # Confusion matrix
 library(broom)    # Forest Plot
 library(pscl)     # ZINB regression
 library(remotes)  # Grab repos not on CRAN FORGE
-remotes::install_github("https://github.com/r-forge/countreg", subdir="pkg")
 library(countreg) # rootogram
+library(topmodels)# another rootogram implementation
+library(gridExtra)# side-by-side models
 ```
 
 ```{r data_load, include=FALSE}
@@ -541,38 +546,63 @@ When examining the effect that tactics and group composition has on casualities 
 
 ``` {r zinb_model, include=FALSE}
 # Blessed be stack overflow, praise always to those who have figured this out before me
+# Define the missing tidy method for zeroinfl models
+tidy.zeroinfl <- function(x, conf.int = FALSE, conf.level = 0.95, ...) {
+  s <- summary(x)
+  
+  # Extract Count Model coefficients and PREFIX the term names
+  count_df <- as.data.frame(s$coefficients$count)
+  count_df$term <- paste0("count_", rownames(count_df)) 
+  
+  # Extract Zero Model coefficients and PREFIX the term names
+  zero_df <- as.data.frame(s$coefficients$zero)
+  zero_df$term <- paste0("zero_", rownames(zero_df))
+  
+  # Combine
+  df <- rbind(count_df, zero_df)
+  rownames(df) <- NULL
+  
+  # Standardize for mice
+  colnames(df)[1:4] <- c("estimate", "std.error", "statistic", "p.value")
+  
+  return(df)
+}
+
 zinb_models <- with(final_imputation, 
                     zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
                              dist = "negbin"))
+```
 
-# pool to consolidate results
-pooled_zinb_results <- pool(zinb_models)
+``` {r zinb_model_2, include=FALSE}
+# Extract the results with confidence intervals
+zinb_analysis_raw <- tidy(pooled_zinb_results, conf.int = TRUE)
 
-# View the raw summary
-summary(pooled_zinb_results)
-# Extract the results
-zinb_analysis <- tidy(pooled_zinb_results, conf.int = TRUE)
+# Clean up the names and recreate the 'component' column
+zinb_analysis <- zinb_analysis_raw %>%
+  mutate(
+    # Create the component column based on the prefix
+    component = ifelse(grepl("^count_", term), "count", "zero"),
+    # Strip the prefix out of the term name
+    term = gsub("^count_|^zero_", "", term)
+  )
 
-# Separate the models for easier exponentiation and reading
 count_model_results <- zinb_analysis %>% filter(component == "count")
 zero_model_results <- zinb_analysis %>% filter(component == "zero")
 
-# Exponentiate the count model to get Incidence Rate Ratios (IRRs)
+# Exponentiate the Count Model to Incidence Rate Ratios (IRRs)
 count_model_irrs <- count_model_results %>%
   mutate(estimate_irr = exp(estimate),
          conf.low_irr = exp(conf.low),
          conf.high_irr = exp(conf.high))
 
-# Exponentiate the zero model to get Odds Ratios (ORs)
+# Exponentiate the Zero Model to Odds Ratios (ORs)
 zero_model_ors <- zero_model_results %>%
   mutate(estimate_or = exp(estimate),
          conf.low_or = exp(conf.low),
          conf.high_or = exp(conf.high))
 ```
 
-```{r rootogram, include=FALSE}
-#| label: fig6
-#| fig-cap: "Negative Binomial Regressions: nkill"
+```{r rootogram_plot, include=FALSE}
 # ZINB model
 plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
                       data = gtd_clean_final, dist = "negbin")
@@ -580,11 +610,78 @@ plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1,
 # Standard Negative Binomial for comparison
 plot_nb <- glm.nb(nkill ~ nperps_cat + region + attacktype1 + weaptype1, 
                   data = gtd_clean_final)
+```
+``` {r rootogram_plot_2, include=FALSE}
+# Had to go rip the source code for this out of the rootogram github after some
+# conflicts between this package and others
 
-# Generate the plots
-par(mfrow = c(1, 2)) # Put plots side-by-side
-rootogram(plot_nb, main = "Standard Negative Binomial")
-rootogram(plot_zinb, main = "Zero-Inflated Negative Binomial")
+
+```
+``` {r rootogram_plot_3, include=FALSE}
+plot_limit <- 25 
+max_count <- max(gtd_clean_final$nkill, na.rm = TRUE)
+
+# Extract the mean (mu) and dispersion parameter (theta)
+mu_nb <- predict(plot_nb, type = "response")
+theta_nb <- plot_nb$theta
+
+# Calculate expected frequencies: sum the probabilities of exactly 'i' deaths across all attacks
+expected_freq_nb <- sapply(0:plot_limit, function(i) sum(dnbinom(i, mu = mu_nb, size = theta_nb)))
+observed_freq <- table(factor(gtd_clean_final$nkill, levels = 0:plot_limit))
+# The pscl package natively calculates the full probability matrix using type = "prob"
+expected_probs_zinb <- predict(plot_zinb, type = "prob")
+expected_freq_zinb <- colSums(expected_probs_zinb[, 1:(plot_limit + 1)])
+
+# Build plotting dataframes
+df_nb <- data.frame(
+  Count = 0:plot_limit,
+  Observed = as.numeric(observed_freq),
+  Expected = as.numeric(expected_freq_nb)
+) %>%
+  mutate(
+    Sqrt_Obs = sqrt(Observed),
+    Sqrt_Exp = sqrt(Expected),
+    Bottom = Sqrt_Exp - Sqrt_Obs # The bar hangs down from the expected line
+  )
+df_zinb <- data.frame(
+  Count = 0:plot_limit,
+  Observed = as.numeric(observed_freq),
+  Expected = as.numeric(expected_freq_zinb)
+) %>%
+  mutate(
+    Sqrt_Obs = sqrt(Observed),
+    Sqrt_Exp = sqrt(Expected),
+    Bottom = Sqrt_Exp - Sqrt_Obs
+  )
+
+# Helper function to generate the rootogram plot to avoid repeating code
+build_rootogram <- function(data, title) {
+  ggplot(data, aes(x = Count)) +
+    geom_segment(aes(x = Count, xend = Count, y = Sqrt_Exp, yend = Bottom), 
+                 linewidth = 4, color = "steelblue", alpha = 0.8) +
+    geom_line(aes(y = Sqrt_Exp), color = "red", linewidth = 1) +
+    geom_point(aes(y = Sqrt_Exp), color = "red", size = 2) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+    labs(
+      title = title,
+      x = "Number of Fatalities (nkill)",
+      y = expression(sqrt("Frequency"))
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(face = "bold", size = 12))
+}
+```
+``` {r rootogram_plot_4, include=FALSE}
+#| label: fig6
+#| fig-cap: "Negative Binomial Regressions: nkill"
+# Create both plots
+plot1 <- build_rootogram(df_nb, "Standard Negative Binomial")
+plot2 <- build_rootogram(df_zinb, "Zero-Inflated Negative Binomial")
+final_rootogram <- grid.arrange(plot1, plot2, ncol = 2)
+# Display in viewer
+print(final_rootogram)
+# Save for publication
+ggsave("rootogram_comparison.png", plot = final_rootogram, width = 12, height = 6, dpi = 300)
 ```
 
 \clearpage
