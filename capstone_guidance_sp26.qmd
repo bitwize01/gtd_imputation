@@ -1,0 +1,439 @@
+---
+title: "Capstone Paper Guidance"
+bibliography: the_bib.bib
+csl: american-political-science-association.csl
+abstract: >
+  This document contains the directions for the capstone project and an overview of the semester as a whole. You must read this document carefully to be successful in this course.
+
+papersize: letter
+
+margin-left: 1in
+margin-right: 1in
+margin-top: 1in
+margin-bottom: 1in
+cap-location: top
+
+format:
+  # pdf:
+  #   toc: true
+  #   toc-depth: 2
+  #   number-sections: true
+  #   linestretch: 2
+  html:
+     toc: true
+     toc-depth: 2
+     number-sections: true
+  
+    
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+\clearpage
+
+\raggedright
+
+\setlength{\parindent}{20pt}
+
+# Introduction
+
+Welcome to the capstone course! If you read only one thing from the course materials this semester, this must be it. This document describes the capstone project and the steps you must take to complete it successfully this semester.
+
+If you are in the capstone course, you should have finished all other core courses in the Data Analytics and Policy program. You should not be taking any core course simultaneously with the capstone, and we do not recommend taking more than one course in addition to the capstone, unless you are truly a full-time student. The most common reason for students to go into capstone continuation is that they underestimate the workload and struggle to balance it with too many other courses and their work and other obligations.
+
+The capstone course is designed so that you can showcase your skills in quantitative critical reasoning. You are going to write a paper that builds on previous scholarly literature and conducts original analysis. Your writing should be clear enough that it convinces the reader that are you ready to be an important collaborator in high stakes projects. What you generate this semester should be your and the Data Analytics and Policy program's best work.
+
+# Project Overview
+
+DAP capstones are in the style of a social scientific research article, like you would find in a political science, economics, or public policy scholarly journal. You are going to write an empirical investigation of a research question that is related to politics or policy. It could be about American politics or policy at the state, local, or federal level. It could also be about international politics and policy. You can pick a topic that is about political behavior of citizens or the dynamics of social issues at the individual or group level, or it could be about institutional or policy outcomes. There is flexibility, but the topic needs to be something in the broad domain of politics and policy.
+
+The format of the paper should follow that of a scholarly article. As such, it should have the following sections. **Please note that the page lengths indicated for each section are approximate, but the maximum length of the paper with all tables, figures, references, etc. is 30 pages.**
+
+-   Title page (like this document has) including a table of contents (two levels of depth maximum) and an abstract.
+
+-   An introduction that draws the reader in and presents a research question. 2-3 pages.
+
+-   Literature review. This includes background on the topic and review of previous literature. This sets up the paper. It should include theoretical development that generates testable empirical hypotheses and/or presents a specific quantitative puzzle or problem. 5-8 pages.
+
+-   Description of data and methods and presentation/discussion of quantitative results. 8-12 pages.
+
+-   A conclusion that discusses policy relevance, limitations, and opportunities for future research. 2-3 pages.
+
+-   List of References
+
+-   Appendix of Tables and Figures. This includes any tables or figures that refer to in text that you don't put in-line, and any supplemental tables and figures.
+
+The capstone should be a **maximum of 30 pages**, inclusive of all text, footnotes, tables, figures, and references. The instructor reserves the right to penalize your project and advise that you enter continuation if your submission is more than 30 pages total.
+
+**This is not the time to learn a new statistical methodology. Use a tool that you learned in a previous Data Analytics and Policy course.**
+
+**Project Scope Flexibility:** Research projects can take many forms, and if you have an idea for a project that lies at or just beyond the edge of these parameters, you can open a discussion with your capstone instructor about this. Some projects, for instance, may rely more on machine learning/predictive analytics than traditional hypothesis testing. In other instances, a project may be more exploratory and hypothesis-generating than hypothesis-testing. However, this is not the most common or the recommended approach. You **must** correspond and be responsive to instructor feedback about what will constitute an acceptable capstone project. Regardless of whether your objective is prediction, causal inference, or something else, it helps to have one or more research studies to point to as models for your research.
+
+**Changing Topics:** From time to time, a project that seems promising at the outset does not unfold as expected. You may wish or find it necessary to change your topic over the course of the semester. However, you must do this in consultation with your instructor. Major topic changes after the midpoint of the semester are not advised and may not be approved. A paper that is submitted without faculty consultation may not be accepted and may require the student to enter continuation, or else fail the capstone course.
+
+# Assignments
+
+The instructor reserves the right to modify these requirements as the semester develops.
+
+Your final grade in the capstone class is out of **205 points**. **200 points** comes from your final paper (including the instructor's assessment of your consistent progress and professional engagement with the writing process). The final **five points** come from five short "check in" engagement activities over the course of the semester.
+
+Five out of two hundred points is small, but all of these points can be pivotal because of the small range in final capstone scores. Skipping any of these steps can make the difference for a half of a grade in the class.
+
+**Consultations and engagement:** You are required to meet at least twice with your instructor in the first part of the course. Additional consultations may be required at your instructor's discretion. There are a few other discussion and engagement activities as well.
+
+**Four written submissions:** You will turn in an initial proposal, a rough draft, a second draft, and a final submission. You must keep up with submission deadlines in the course or you may receive a deduction in your final grade, fail the course, or be required to go into continuation.
+
+**One presentation/group discussion:** You will prepare a presentation about your work and either record it and participate in a discusison board activity, or present your work in a discussion with classmates.
+
+## Self-Assessments/Peer Engagement
+
+Writing your capstone is a semester-long process that involves interaction with your peers and the instructor. This is a required part of the course and an important professionalization activity.
+
+The five points towards course engagement will come from your two meetings with the instructor and three discussion/reflection activities.
+
+While this is a small number of points, **because of how letter grades correspond to numeric values, missing one point on this may be determinative of your final grade in the course.** Don't skip these if you want to earn the best possible grade in the class, given your performance on the final paper.
+
+-   Module 1-2 - Discussion Board for Initial Ideas (1 point)
+
+-   Modules 1-3 - Consultation with Instructor (1 point)
+
+-   Modules 4-6 - Consultation with Instructor (1 point)
+
+-   Module 7-9 - Reflection or Peer Review (1 point)
+
+-   Modules 10-12 - Presentations or Group Discussions (1 point)
+
+## Initial Proposal, Annotated Bibliography, and Data Identification
+
+Your first submission is an initial proposal, annotated bibliography, and data identification,
+
+The initial proposal should be a two to three page statement that describes, to the best of your ability, your research interest. You should help the reader understand what question you are trying to answer about the world. Provide accompanying factual background that situates your study.
+
+Next, provide an annotated bibliography of at least **ten** scholarly sources. There are many examples of annotated bibliographies online. Basically, it is a list of sources, with a properly formatted citation for each. Because you are required to write in the `.qmd` format (more on this below), you can use the citations tools for Quarto documents and write a series of paragraphs about your sources, with a citation in each paragraph that generates your end-of-document reference list. Write 3-5 sentences that briefly summarize the work and explain its relevance to your research. The paper could introduce useful data, useful theory, or useful analytic strategies. Your few sentences about each source should explain how the paper helps you in your own research.
+
+Finally, you need to include with this document a list of possible data sources that you can use this semester. These need to capture your variables of interest and give you the statistical power to draw inferences or build useful models. Provide a few different data sources and write a few sentences that describe how they will be useful to you. Importantly, indicate the number of observations and the number of predictors/variables that are in these data. **Include the data files themselves (or a link that provides easy access for the instructor) and any code you used to explore these data. Do not just provide topline summaries or visualizations from other sources. You need primary data in machine-readable format (typically, .csv or equivalent).**
+
+-   You cannot write a capstone project if you do not have accessible, usable, data that you can load into R, Python, or whatever statistical software you are most comfortable using.
+
+-   You cannot collect any original data from human subjects (surveys, interviews, etc.). The only circumstance where this might be allowed is if it has been pre-cleared with the Data Analytics and Policy program director, and the data collection process and IRB approval are already complete or at an advanced stage of completion.
+
+-   We strongly discourage any extensive original data gathering effort, as there is not sufficient time in the semester to execute a collection plan.
+
+The initial proposal is evaluated on a complete/incomplete basis. Failure to submit a timely draft may be reflected in the final course grade. The instructor will provide feedback.
+
+## Rough Draft
+
+Your rough draft should be about 10 pages and should represent good progress towards your final submission. You should have 2-3 pages of introduction that states a clear research question, followed by 4-5 pages of factual and theoretical development based on previous literature. That development section should set up a statement of a hypothesis. After that, use 3-4 pages to describe a strategy for testing that hypothesis using quantitative methods, based on data that you have access to and have managed/cleaned/prepared. Be as specific as you possibly can with this methodology. **You must have results to share at this point, demonstrating that you have command of your data and can generate insights from it.**
+
+The rough draft is evaluated on a complete/incomplete basis. Failure to submit a timely draft may be reflected in the final course grade. The instructor will provide feedback.
+
+## Second Draft
+
+Your second draft should be at least 15 pages **of text** and should be as advanced as you can possibly make it. You should have final results to share at this point, or it is likely that you will need to go into capstone continuation.
+
+The second draft is evaluated on a complete/incomplete basis. Failure to submit a timely draft may be reflected in the final course grade. The instructor will provide feedback.
+
+## Final Submission
+
+This is the complete, polished final submission, with all files required for replication.
+
+**Length:** The paper should be about 20-25 pages long, including a reasonable number of appropriately sized tables and figures. Do not submit more than 30 pages including all components, figures, references, everything. We reserve the right to stop reading after 30 pages and penalize or require continuation in cases where more than 30 pages are submitted.
+
+**Style and formatting:** In general, the paper must demonstrate excellent written composition skills, including organization and transitions. It must use appropriate conventions and citation format. Statistical results must be presented in an aesthetically pleasing format, in tables and/or figures. **No raw code or programming output.** All tables and figures need to be labeled, appropriately scaled, use a sensible color scheme, and add value to the analytic narrative.
+
+**Research question:** The paper has to have a readily identifiable research question that makes an understandable claim. While perhaps not entirely "original," the research question that underlies a capstone project should not be a complete retread of previous findings, nor should it be so ambitious that the topic cannot be meaningfully interrogated in a 25 page paper. The research question should be testable/answerable using the methodology that you select.
+
+**Engagement with previous research:** The project must include a synthetic, objective, efficient review of previous research that provides an overview of key background information and scholarship. A well-crafted theory section/literature review gives the reader the context required to understand how the paper relates to a broader scholarly or policy conversation. The paper builds upon scholarly research, not just popular news stories or "intuition." As a general guideline, the research paper should draw on **15 scholarly citations**. Fewer than 15 citations is a sign that the paper is not sufficiently grounded in previous research.
+
+**Analytic content:** Hypotheses/claims should be clearly described with clear a priori expectations established for the results. The discussion demonstrates an understanding of the data and what they measure. The variables effectively operationalize the concepts under study. Any transformations of the variables are clearly explained. The statistical methodology is appropriate for both the research question and the data. The paper includes detailed, easily understandable description of the quantitative methods used in the analysis. Discussion of results accurately interprets the analysis and discloses any limitations of the analysis.
+
+**Conclusion and implications:** Conclusion summarizes key findings, identifies the original contribution of the paper, and suggests future avenues of inquiry.
+
+## Final Paper Grading
+
+The following letter grades and corresponding numeric grades will be applied to the final submission. **Keep in mind the capstone should be your best work.**
+
+A (94 to 100%): Excellent. This is an exemplar of program objectives, and we would feel comfortable sharing this as some of the strongest work from the Data Analytics and Policy program. This project is carefully and thoroughly executed in all dimensions. The research question is interesting for theoretical and/or practical reasons. The research design is creative and generates useful insights. The project is scoped in such a way that the methods and data can help move the ball forward in this field of research. The analysis is done with care, is methodologically sound, and stands up to criticism. The presentation is professional - the writing is good and tables or figures are aesthetically pleasing. Any suggestions for changes only serve to strengthen what is already an excellent project. The project doesn't need any major revisions or rethinking. This is evidence that the author is ready to be an important contributor to work at the confluence of data science and politics or policy. **While there is no limit on the number of As that we can award, and we do not grade comparatively, an A is often not the most common grade. It is reserved for "showcase" work that demonstrates the best of what our Data Analytics and Policy students can do.**
+
+A- (90 to 93%): Strong. The project has all the components of a capstone project. There is a clear research question that can be answered with empirical, quantitative methods. The paper is framed as an extension of previous research. The paper presents theoretical expectations and describes a sound approach for testing those expectations. On the whole, the paper suggests that the student would be able to execute another project independently, of similar scope and complexity. A- work may be distinguished from A work by the presence of minor errors, omissions, untidy formatting, or writing that should have been edited with greater care. A project might also be an A- because of concerns with scoping, originality, or the usefulness of the results. An A- project might take a swing at too difficult or too broad a question than what can realistically be tackled in a semester. Conversely, the paper might be too narrow, unoriginal, or too simple to befit a semester length project. In other words, there may be some gap between what the paper sets out to do and what can be accomplished with the data and methods available/feasible over the course of the semester. **An A- is still a good grade for a capstone project. A student that gets a A- would still get a good letter of recommendation on the basis of the final paper.**
+
+B+ (87-89%) / B (83-86%) / B- (80-82%): Passable, but opportunities for improvement. This project satisfies the basic expectations for a capstone project, but it falls significantly short of the "gold standard" in at least one dimension or has a pattern of issues across dimensions. Significant revision is needed. The conceptualization of the question, the engagement with previous research, theoretical development, methods, or discussion of results could be flawed. The data could be inappropriate or inadequate for an investigation of the question that the paper poses. The project may ask an unclear research question or apply statistical tools incorrectly. The presentation or writing could be below expectations - poor organization, clunky writing, inartful presentation, or a general lack of polish and refinement. Where a paper falls within the B range is a function of the extent of revisions that would be required to bring the paper into the A or A- range.
+
+C (70 to 79%): Below standard. This is deficient on multiple dimensions, similar in nature to a B level project but to a more extensive degree. Several features of the project could, individually or jointly, merit this assessment. The quality of writing could be inconsistent with graduate level expectations. The engagement with previous literature could be superficial, disjointed, or incomplete. The theoretical expectations could be missing, illogical, or inscrutable. The methodology could be unsound or incorrectly interpreted. The project feels rough, unfinished, or poorly conceived throughout. So much revision is required that it is necessary for the student to repeat the Capstone course to satisfy program objectives.
+
+F (0 to 69%): This project is so seriously flawed and/or the effort is so incomplete that it calls into the question the readiness of the student to have embarked on the capstone course. The mistakes, errors, and flaws are pervasive and/or profound. This is a project that indicates frustration of the course and program purposes.
+
+## Professionalism and Timeliness
+
+Consistent engagement with the writing process, your instructor, and your classmates is an essential component of the course. Failure to submit satisfactory preliminary assignments, failing to incorporate instructor or peer feedback into your work, absence from discussions, excessive tardiness, or other kinds of inconsistent or unprofessional engagement in the course can lead to you receiving a deduction on your final grade.
+
+# Continuation
+
+Capstone Continuation is an administrative process that allows you to continue to work on your capstone beyond the end of the semester, if your project is not passable or complete. It is not a full course, but rather an administrative extension. There is a \$500 charge, and you will work with a Data Analytics and Policy faculty member to bring your project to completion.
+
+**Your instructor will inform you if your final submission is not passable by Wednesday night of Module 12. Then, you have until Friday night to formally request continuation from the instructor via email. Please cc the Data Analytics and Policy program director on this request.**
+
+In addition to requesting continuation from the instructor, there are two additional administrative forms that you must complete by the last day of the semester - an incomplete request and a continuation acknowledgement form. **Please review the full policy on continuation here for critical further details. It is your responsibility to fully review this policy and follow it.**
+
+The policy and procedures for continuation are provided here: <https://advanced.jhu.edu/current-students/policies-and-procedures/>
+
+# Formatting
+
+## Template
+
+You are required to write your capstone project using a Quarto (`.qmd`) document, using the template document provided in the course. **Render your document early and often throughout the semester. Do not leave formatting to the end.** We require Quarto because it is the easiest format for reproducible scientific writing. **We reserve the right to refuse to accept any capstone project that is not written in Quarto and/or does not include all materials required to replicate your findings from scratch using the original data files and code.** Any deviation from this requirement must be discussed with the instructor.
+
+## Formatting and Style
+
+-   12 point font
+
+-   Times New Roman or equivalent Serif font
+
+-   Double spaced
+
+-   Left-justified
+
+-   Page numbers at bottom center.
+
+-   Numbered headers and subheaders. No more than two levels of header (1, 1.1, 1.2., 1.3, etc. No 1.1.2 or similar.) Make headers and subheaders descriptive but not overly long.
+
+-   For other stylistic guidance, use the [American Political Science Association style guide](https://connect.apsanet.org/stylemanual/.), which is similar to the Chicago Manual of Style.
+
+    -   Consult Strunk and White or other style guides to improve your writing. Have a friend, family member, or classmate review your draft and proofread it for you.
+
+## References
+
+Follow the [American Political Science Association style guide](https://connect.apsanet.org/stylemanual/), particularly the sections "Manuscript Writing," "Parenthetical Citations," and "References." This includes bibliographic formatting for different sources. This is very similar to the Chicago Manual of Style.
+
+APSA style calls for listing author and year as needed in text using parenthetical citations, then including a full reference list at the end. The APSA guide also has helpful pointers on grammar and other style matters.
+
+If you use the template and put your list of references in a `.bib` file, then the `.csl` file that accompanies the template (and is referenced in the YAML front matter) will take care of the reference formatting for you. The best way to learn to use Quarto with `.bib` files is to read [the Quarto documentation](https://quarto.org/docs/authoring/footnotes-and-citations.html). It requires a bit of effort up front but will make your life much easier in the long run.
+
+You can create and manage .bib files with many different tools - Zotero, JabRef, Mendeley, and more. [JabRef](https://www.jabref.org) is probably the lightest weight and easiest to use. With these tools, you insert information about your sources into forms, and the software will format that information into entries in a `.bib` file. Then, put your `.bib` file into the folder with your `.qmd` file, reference that `.bib` in the YAML (as we have in this document), and then you insert the `.bib` entries using the tags in the `.qmd` document, like below:
+
+This is an example citation [@Paschall2023]. Here's another [@bachrach2017two]. Here, there are two citations supporting this sentence. [@Paschall2023; @bachrach2017two]. Notice that the period follows the parentheses. If you want to put the citation in text it looks like @Paschall2023.
+
+The .csl file make sure all your citation information is put in the correct APSA format. Try it out!
+
+## Tables and Figures
+
+Make sure all of your tables and figures are labeled, numbered, and have descriptive titles. Make sure they are aesthetically pleasing, with plain English labels, legends, etc. **Unless there is a compelling technical justification, you should generate all tables and figures using code or markdown formatting in the Quarto document in which you write your paper.** As with the end of this document in the appendix of tables and figures, you should hide the code that generates the figures and tables - you only want the tables and figures themselves in the final submission.
+
+You can choose to either put your tables and figures in-line with your document, or you can include them at the end of your main text as an Appendix of Tables and Figures. It's preferable that you put them in-line, but sometimes this is a formatting pain because Quarto has very strong opinions about where figures go on the page. So, the path of least resistance (and what is consistent with how you'd prepare an article for publication) is to include placeholders in between paragraphs that say something like:
+
+\center \[Table 1 about here\]
+
+\raggedright
+
+\setlength{\parindent}{20pt}
+
+At the end of this document, you'll find a few resources for and examples of tables and figures. Make tables and figures a reasonable size and use your space efficiently.
+
+# Timeline in Brief
+
+-   **Module 1:** Post initial ideas to message board. Start collecting literature. Schedule consultation with your instructor.
+
+-   **Module 2:** Respond to a classmate. Keep refining.
+
+-   **Module 3:** Submit initial proposal, annotated bibliography, and data identification.
+
+-   **Module 4:** Keep writing. You should have a really good idea of your topic and your data source at this point. Schedule consultation with your instructor.
+
+-   **Module 5:** Get your literature review and theory firmed up and looking good. Start exploring your data.
+
+-   **Module 6:** Submit Rough Draft.
+
+-   **Module 7:** Keep writing. Start putting together a complete draft. Plan to do either an author's note or a peer review.
+
+-   **Module 8:** Keep writing. Polish and get everything assembled. You should have a well developed intro, lit review, theoretical development, description of data and methods, and meaningful, well-presented results.
+
+-   **Module 9:** Submit Second Draft.
+
+-   **Module 10:** Polish and develop. Meet with the instructor if you are having any problems or concerns. Plan your presentation or final group conversation.
+
+-   **Module 11:** Proofread the heck out of this thing. Whatever you have, make it look as good as you possibly can. Submit your final version by Friday of Module 11.
+
+-   **Module 12:** This week is reserved for time to review your project, work out issues with your submission, and assess whether continuation will be needed.
+
+**This is a fast schedule and if you do not make progress consistently over the semester, you risk not getting finished.**
+
+# Resources
+
+## Guides
+
+If you've never written a quantitative social scientific research paper before, it can be a little intimidating. This has led to a cottage industry of academics writing books about how to write papers. There are lots of examples. Most say pretty much the same things, but it's worth your time to familiarize yourself with at least one of these guidebooks.
+
+An excellent text, which is freely available through the web via the JHU library (you just need to proxy or VPN in), is [*Empirical Research and Writing*](https://us.sagepub.com/en-us/nam/book/empirical-research-and-writing) by Leanne Powner. Powner is a political scientist by training and the book uses political science examples, but the strategies outlined in this book could apply equally well across any quantitative social science, including policy studies.
+
+[A shorter but very nice summary](https://www.scottminkoff.com/guides) is provided by Scott Minkoff of SUNY New Paltz. We **strongly recommend** that you read this after you finish with this guidance document. This guidance is very similar to Prof. Minkoff's. Note on page 7 that your work is going to fall into the category of "empirical causal research."
+
+If you are in search of more options, you could consider for purchase some of these:
+
+-   [*Political Science Research Methods*](https://edge.sagepub.com/johnson8e) by Johnson, Reynolds, and Mycoff
+
+-   [*Thinking Like a Political Scientist*](https://press.uchicago.edu/ucp/books/book/chicago/T/bo22317299.html) by Christopher Howard
+
+-   [*The Craft of Research*](https://press.uchicago.edu/ucp/books/book/chicago/C/bo215874008.html) by Booth, Colomb, Williams, Bizup, and Fitzgerald (this is a considerably more general text)
+
+Reading through Powner or another book about the process of research writing can be helpful, but by far the most important part of learning to write a research paper is reading other research. You have to read enough that you understand the subject matter you are writing about, and in doing so you have to internalize the logic and structure of social science research.
+
+As you read, find a paper that you really like and is related to your topic. Use it as a model - not a resource for copying and pasting text, but a guide to help you structure your own work.
+
+## Useful Journals
+
+A great place to start your research journey is to identify some of the top journals in your field. This is useful in terms of finding models for how to structure and write a scholarly paper, and it can help you find a topic. A good way to generate ideas is to look at the table of contents from the past few years in some of the top journals that are relevant to your interests.
+
+The University of Northern Iowa [has a very helpful list here.](https://guides.lib.uni.edu/political-science-research/top-tier-journals) More specifically, below is a list of some specific journals that might be helpful to look at. If you look through these, you'll see that all of the articles in these social scientific journals follow largely the same format. Research design in the social sciences is similar regardless of the underlying subject matter - if you analyze human behavior with numbers, any of these journals have good models.
+
+Keep in mind that these journal articles are all likely to be much more complex than your capstone project. However, you can still follow the basic structure and logic of these kinds of studies, joining the conversation that is set up by previous literature. The scope of your study will be smaller, but the framing and style should be similar.
+
+Public administration and public policy:
+
+-   [Public Administration Review](https://onlinelibrary.wiley.com/journal/15406210), [Policy Studies Journal](https://onlinelibrary.wiley.com/journal/15410072), [American Review of Public Administration](https://journals.sagepub.com/home/arp)
+
+American Politics (and some international politics):
+
+-   [American Political Science Review](https://www.cambridge.org/core/journals/american-political-science-review), [American Journal of Political Science](https://ajps.org/), [Journal of Politics](https://www.journals.uchicago.edu/toc/jop/current)
+
+International Relations and Comparative Politics:
+
+-   [International Security](https://direct.mit.edu/isec), [International Organization](https://www.cambridge.org/core/journals/international-organization/latest-issue), [World Politics](https://wpj.princeton.edu/), [Comparative Political Studies](https://journals.sagepub.com/home/cps)
+
+Economics journals can be somewhat more difficult to read and are often a bit math-ier than we aim for in the Data Analytics and Policy program, but you might consider browsing through these.
+
+-   [American Economics Review](https://www.aeaweb.org/issues/747), [National Bureau of Economics Research working papers](https://www.nber.org/papers?page=1&perPage=50&sortBy=public_date) (these are technically not yet published but they are still good examples)
+
+Many students are also interested in public health topics.
+
+-   [American Journal of Public Health](https://ajph.aphapublications.org/), [American Journal of Preventive Medicine](https://www.ajpmonline.org/)
+
+# The Research Process
+
+## Defining the Project Scope
+
+The most difficult part of many research projects is identifying a topic for your research and narrowing that from a topic to question. Setting criteria for a "good" research question is not easy, but generally your research question should be:
+
+1.  Grounded in previous research: an extension of previous scholarly or professional research.
+
+2.  Empirical: attempts to explain some feature of the world, whether human behavior or social/policy/institutional outcomes.
+
+    -   With limited, instructor-approved exceptions, papers should have a dependent variable (outcome) and one or more independent variables (predictors) of interest. You might be interested in understanding the causes of an outcome, or you might be interested in the effects of some feature of social/political life. Either emphasis is fine.
+
+3.  Grounded in theory: makes predictions about the causes or consequences of the feature of interest, based on some kind of sound theory.
+
+4.  Testable: studies a question that can be answered based on data that exist in the world.
+
+    -   There must be variation in both your outcomes and predictors.
+    -   There must be a sufficient number of observations across space and/or time to give you statistical power (i.e., the Central Limit Theorem has to kick in). You cannot estimate a regression model or meaningfully compare averages with less than 30 observations. Similarly, "garbage can" regression models more than 10 predictors are generally quite suspect.
+
+    5.  Feasible: you must have access to the data and methods required to complete your project within the Capstone semester.
+
+    -   Do not attempt to do major data gathering this semester.
+    -   Do not attempt to learn an entirely new statistical method or software program this semester.
+    -   **You are not allowed to collect any data from human subjects through interviews or surveys. Such data gathering requires Institutional Research Board/University approval, and this is not possible in one semester.**
+
+## Connecting with Previous Research
+
+The first thing to do this semester is to pick a topic. What generally interests you in the world of politics and policy? What is unknown, unclear, or misunderstood about politics or policy, which you want to learn more about?
+
+Once you have a general idea about what you are interested in, you need to quickly move to figuring out what researchers in academia and in the professional policy research community (e.g., think tank world) already know about the topic. The best place to start with this is Google Scholar. Type some search terms into Google Scholar. Start by being as specific as you can. Start looking through the results. Open a million tabs. Read a bunch of abstracts. Find 7-10 articles that you think are closely related to what you are interested in. You might need to take a close look at 25-30 articles before you can really zero in on what you are most interested in. You might need to look through even more. Don't stop early on this. A thorough scan of the literature will really help you write a good capstone paper.
+
+After you have located 7-10 articles by skimming through Google Scholar search results, you *probably* have enough articles to start a bibliography search. From those 7-10 articles, you need to follow the citation chain both forwards and backwards from those starting articles. For this, use Google Scholar and use the "cited by" link that you find in an article's search result. Look through those results for each of your articles and save those that seem most interesting/relevant. Then, as you read these studies, look carefully through the literature review/theory section of those papers. Note the papers being cited, and go find those with Google Scholar. Following this citation chain backwards and forward, in 8-12 hours of work you'll likely have dozens of articles about your topic, and you'll start to develop a "web" of knowledge from your literature.
+
+This is a lot of reading, but this is what you need to do if you want to build a paper that is appropriately positioned in previous literature and is theoretically motivated.
+
+## What to Focus on in Previous Research
+
+When you read previous research on your topic, there are a few things you want to get out of your reading. First, you want to look at the structure of these papers, to start to understand the flow of introduction, literature review, theoretical development, hypotheses, data, results, and conclusions. Internalizing this will help you understand the task ahead of you.
+
+Second, you want to use your reading to start better defining your question. You might have some ideas already about your outcome and predictors of interest, but if you are still working to define those, it can be helpful to see what other researchers are doing. What questions are "hot" in the field? What outcomes or predictors are interesting to other researchers? Researchers also very commonly comment on possible extensions to research in the conclusions - take careful note of that.
+
+Third, reading other research makes you more familiar with the data sources that are commonly used in research in your area of interest, as well as the methodological tools and approaches that you might use. In politics and policy, there are lots of publicly available datasets that researchers draw on. These might be surveys or administrative datasets or datasets that scholars/full time researchers have assembled for public dissemination and use. Sometimes, scholars make public the data they use in their research for replication purposes, and to allow other researchers to build on their work. This can all be very helpful to you, because **you cannot write a research paper if you have insufficient data to support an empirical, quantitative analysis**.
+
+Finally, reading other research helps you develop the theoretical foundation of your paper. In addition to a question that investigates outcomes and predictors, you need to have a theoretically-grounded set of expectations (hypotheses) about what you are studying. If you think that social media ads change political opinions, why? If you think that military insecurity is associated with the restriction of women's political liberty, why? If you think that child tax credit alleviates hunger, why? Sometimes, the basis of the hypothesis is straightforward (like the child tax credit), and in those situations you'll probably spend more time on factual background and review of previous research than doing unique theorizing. But other times it is more complicated, and especially where the connection you posit is not obvious, you need to give some good reasons for what you expect when you conduct an analysis.
+
+## Writing Your Literature Review and Theory Sections
+
+The Powner and Minkoff pieces do a good job of describing what you are trying to accomplish with the literature review and theory sections. So, read those carefully, and also pay careful attention to how the authors of previous research in your field build a foundation for their study using previous research. In short, you want the literature review and theoretical development to bring your reader up to speed on what is known about your topic. In doing so, you want to highlight what is unknown, unclear, or wrong in that previous literature. That sets up your extension. Then, you want to describe your own expectations/predictions about the outcomes that are of interest to you.
+
+## Doing Your Statistical Analysis and Presenting It
+
+The Data Analytics and Policy program is a quantitative degree, so the expectation is that you will use quantitative reasoning and analysis in your capstone. The range of options here is big. A good analysis can be based on relative simple statistical processes (crosstabs, t-tests, simple linear regression), if those methods are appropriate and carefully presented. You can also use more complex tools like text analysis or different machine learning tools, if you want. You can use R, Python, or another tool, but must consult with your instructor about the appropriate toolkit for your proposed analysis, especially if it something that is not direclty covered in your previous coursework. **Replicability is a requirement. Your instructor must be able to replicate all aspects of your analysis.**
+
+It's key to ensure your methods are appropriate given the structure and features of your data, and the question that you are trying to answer. Again, it is extremely helpful on this front to see what other researchers in your area of interest are doing. If you are trying something that no one else has tried, there might be a reason - it might not be a great idea, or it might not be feasible.
+
+Keep in mind that this is a semester long project - you are not going to reinvent the wheel. Journal articles can take years for teams of full-time researchers to write. You want something interesting and practical, which shows your potential to conduct professional-grade quantitative analysis.
+
+When you present your analysis, think in terms of tables and figures. Professional researchers often read papers by looking at the abstract, then moving quickly to looking at the tables and figures that present results. If those look interesting, then it might be worthwhile to read the entire paper. Keep this approach in mind when you write. Think about the handful of tables and figures that you would highlight in a slide deck or a poster featuring your research. Give the reader a clear takehome message about your work. Your thinking and your analysis should be clear enough that you can communicate the core of your results with just a few well formatted tables and figures. Your text just helps the readers understand that quantitative content, pointing out what is important and explaining the context for the tests.
+
+## Conclusion
+
+The last few pages of the paper are reserved for summing things up and setting the stage for the next researcher. Recap briefly what you have done and explain why the results are important and interesting. If the results aren't important or interesting, write why they are not or what you could do to make them more interesting. If there are notable limitations to the paper, write about them here - maybe you couldn't get all the data you wanted or something about the statistical analysis just can't be resolved without a different approach. You can also write about implications for policymakers/politicians/decisionmakers that they should draw from your work. Again, the best way to learn what to put in a conclusion, as appropriate for your topics, methods, and findings, is to read other work in your field and see how other writers and researchers approach this.
+
+## Getting Help
+
+For all of the above, maybe the most important thing you can do in this class is meet regularly with your instructor. We have office hours and are available for consultations. Take advantage of this.
+
+# Closing Thoughts
+
+What you are taking on this semester is not a trivial endeavor. Especially in a single academic term, writing a good quality, original, quantitative analysis is a big challenge. The keys to success are working very hard at the start of the semester as you conceptualize your project, consulting frequently with your instructor and taking feedback seriously, and maintaining a consistent level of effort over the course of the semester.
+
+\clearpage
+
+# Appendix of Tables and Figures
+
+For more details about how to work with figures in Quarto, check the [Quarto documentation](https://quarto.org/docs/authoring/figures.html) (or just follow this example). Make sure all your figures are appropriately scaled, easy to read/meaningful, and have axis labels with plain English names of variables
+
+For tables, [you can make tables manually in Quarto](https://quarto.org/docs/authoring/tables.html), but it's often better to use an R package that generates nice looking tables automatically. There are lots of options for this, but a [good choice](https://haozhu233.github.io/kableExtra/) is `kable` in conjunction with `kableExtra`. For PDF documents that are rendered using LaTex, [here is the specific documentation](https://haozhu233.github.io/kableExtra/awesome_table_in_pdf.pdf).
+
+There are similarly lots of options for making nice-looking regression output. A [good choice](https://jtools.jacob-long.com/articles/summ.html) is `jtools`. You will want to install the packages `kableExtra` and `huxtable` along with `jtools`. Stargazer is another [common choice](https://libguides.princeton.edu/R-stargazer).
+
+```{r}
+#| label: fig1
+#| fig-cap: "Fuel Efficiency and Weight"
+
+library(tidyverse)
+
+ggplot(mtcars, aes(x=wt, y=mpg)) + 
+  geom_point() +
+  xlab("Weight (in thousands of lbs)") + 
+  ylab("Miles per Gallon")
+```
+
+\clearpage
+
+Note: if you look at the R code, there is an option in the `kable_styling()` function - the "HOLD_position" value. This is important because it specifies that your table will go exactly where you want it in the document.
+
+```{r}
+
+library(kableExtra)
+
+test_dat<-head(mtcars[, 1:4])
+kbl(test_dat,booktabs=T,caption="Example Table",format="latex") %>% kable_styling(latex_options = c("striped","HOLD_position"))
+
+```
+
+\clearpage
+
+\begin{center}
+Table 2: Regression Example
+\end{center}
+
+```{r}
+#install.packages("huxtable")
+#install.packages("jtools")
+library(huxtable)
+library(jtools) # Load jtools
+data(movies) # Telling R we want to use this data
+fit <- lm(metascore ~ imdb_rating + log(us_gross) + genre5, data = movies)
+export_summs(fit)
+
+```
+
+\clearpage
+
+# References
+
+\[Note that references will be included here at the end of the document automatically if you use a `.bib` file and RStudio's citation tools.\]

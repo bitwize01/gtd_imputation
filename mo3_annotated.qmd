@@ -1,0 +1,543 @@
+---
+title: "Advanced Frameworks for Data Imputation in the Global Terrorism Database: A Synthesis of Transformer-Based Extraction and Meta-Learning Ensembles"
+subtitle: "Thesis Statement, Data Sources, and Annotated Bibliography"
+author: "James Hunter"
+bibliography: ds_jjh_bib.bib
+csl: american-political-science-association.csl
+abstract: >
+ This paper explores the ability of unsupervised machine learning algorithms to perform data imputation against the Global Terrorism Database (GTD), a large, complex dataset that has been carefully curated to contain a comprehensive listing of terrorist attacks from 1970 to 2021. The research explores the ability to populate missing fields by contextual processing of full-text fields.
+papersize: letter
+
+margin-left: 1in
+margin-right: 1in
+margin-top: 1in
+margin-bottom: 1in
+cap-location: top
+
+format: 
+  pdf:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    linestretch: 2
+    
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+\clearpage
+
+\raggedright
+
+\setlength{\parindent}{20pt}
+
+# Initial Proposal
+
+The systematic quantification of political violence relies upon the structural integrity of longitudinal archives, among which the Global Terrorism Database (GTD) serves as the preeminent unclassified repository for researchers, policymakers, and security analysts [@Abdalsalam2024a]. Maintained by the National Consortium for the Study of Terrorism and Responses to Terrorism (START), the GTD documents over 180,000 incidents since 1970, capturing more than 130 variables for contemporary events, ranging from tactical specifics to perpetrator identities and casualty metrics [@GTD2026]. Despite its breadth, the utility of the GTD is persistently challenged by the "missingness" problem: the presence of null or unknown entries in critical fields such as perpetrator group names, casualty counts, and specific weapon sub-types [@Abdalsalam2024a]. These informational voids are not merely random artifacts of data entry but are often the product of systematic biases in media reporting, state-sponsored censorship, or the inherent clandestine nature of non-state actors [@wani2024review].
+
+The modern frontier of data science offers a robust suite of solutions to mitigate these gaps through advanced data imputation [@Azad2025]. Traditional methods, such as listwise deletion or mean substitution, are increasingly viewed as inadequate because they frequently introduce significant bias and reduce the statistical power of subsequent analyses [@Aleryani2020]. Instead, a sophisticated integration of domain-specific Natural Language Processing (NLP) and meta-learning ensemble architectures is emerging as the gold standard for data recovery in conflict event databases. By leveraging extractive transformer models like ConfliBERT to analyze unstructured event summaries and employing Meta-Imputation Balanced (MIB) frameworks to synthesize predictions from multiple algorithmic sources, I aim to achieve a level of granular accuracy previously considered unattainable [@Azad2025].
+
+After identifying the fields with the highest level of missingness, I will combine ConfliBERT and MIB into a Generative Adversarial Imputation Net (GAIN) framework and analyze the efficacy of the results. This will be compared to other modern imputation methods such as DeepIFSAC for comparative analysis [@Kowsar2025]. The result of this comparison will be an examination of the amount of data newly available for research as compared to previous efforts which dropped groups without a sufficient number of attacks or contained missing data [@Abdalsalam2021a]. My full workflow is divided into several steps:
+
+## Data Collection and Integration
+
+If the field in the GTD dataset could be identified with the data available only to the GTD itself, the START would have already done so. Thus, the first step is to produce an event fingerprint which can be used to look up the event in other datasets. Using metadata such as Event class, location and date, I will use this fingerprint to look up even event in the ACLED dataset to acquire additional context and fields on which to employ the FAME method via the Mediacloud database [@Cai2025]. This avoids a need to manually train models against on a large variety of news datasets to find contextual information for furure steps. The result is a collection of text responses corresponding to the event that can then be mined to populate missing fields from the GTD.
+
+## Pre-processing and feature engineering
+
+The next step is to tokenize and normalize the collection of text fields corresponding to the event being enriched. SMOTE-T will be applied to produce synthesized data for group names belonging to minority groups [@Abdalsalam2024], and for preperation in separating the "Unknown" group names into "Lone Wolf" (single perpetrator) and truly unknown groups (multiple perpetrators). Fields with strong interdependencies such as Attack Type and Weapon Type or Number of Killed and Wounded will be identified using Normalized Mutual Information (NMI) and the Pearson correlation coefficient (PCC) [@Abdalsalam2024a]. 10-20% of training data will be reserved for validation purposes.
+
+## Model Training and Imputation Execution
+
+Three seperate processes will be employed for data imputation depending on the type of missing data. For text-based categorical attributes like Group Name or Motive, ConfliBERT will be used to identify Named Entity Recognition and Multi-class Classification [@Brandt2024]. This 33.7 GB pre-trained dataset can extract commonalities from other attacks and descriptions. For numerical values such as the number of killed and wounded, DeepIFSAC can be used to collate data by location and time, and infer adjacent records, identifying attacks that occurred by the same attack type to predict outcomes [@Kowsar2025]. Finally, GAIN can be used with the partially-imputed datasets to make further assumptions on weapon and attack types. This "discriminator" network attempts to differentiate between real and imputed values to ensure realistic results that match established outcomes, not just statistically predicted effects [@Azad2025].
+
+## Meta-Ensemble Integration Framework (MIB)
+
+With candidate values for each field generated from the model collection, I will train a meta-learning layer on the synthetic values. This is also an opportunity to bring in other KNN And Forest models for accuracy comparisons. The MIB serves to balance and weigh the models based on their effectiveness on each imputed column, improving accuracy by dynamic weight adjustment [@Azad2025]. The results of the meta-model produce a final, refined imputed record which can then be analyzed for accuracy.
+
+## Accuracy Validation and Post-Processing
+
+While the modern tooling used to impute the data in this workflow is a critical in for this research, the efficacy of the process is the heart of the papers results. I will validate tool usage both in this particular effort and their viability for application against the GTD. I will determine Root Mean Squared Error (RMSE) and Mean Absolute Percentage Error (MAPE) for the nkill and nwould (casualty) fields, and measure Accuracy, Precision, Recall and F1-score for the gname (group name) and motive (crit1-3) classifications. The weights of each model will be evaluated as a measure of fitness for usage against the GTD, and analysis of the newly-imputed fields will be performed via a regression analysis on the predictive power of the dataset before and after the imputation, such as predicting region based off attack type or weapon usage based off casualties. This before-and-after comparison reflects the actual improvement in data quality post-imputation.
+
+\clearpage
+
+# Data Identification
+
+The **Global Terrorism Database** (GTD) is an open-source database including information on terrorist attacks around the world from 1970 through 2021. Maintained by the National Consortium for the Study of Terrorism and Responses to Terrorism (START), it contains over 200,000 cases of domestic and international terrorist incidents. Each entry includes systematic data on the location, weapons used, nature of the target, and the group responsible, provided there is enough information available. It is widely considered the most comprehensive unclassified database of its kind, making it a critical resource for researchers analyzing patterns and trends in global terrorism. [@GTD2007introducing]
+
+The **Armed Conflict Location & Event Data Project** (ACLED) is a high-frequency, disaggregated dataset that provides near-real-time monitoring of political violence and protest events worldwide. It captures specific details for each incident, including the date, precise geographic location, actors involved, and reported fatalities, across categories like battles, riots, and violence against civilians. The ACLED is notable for being updated weekly (with a 12 month lag time) and covers both violent and non-violent strategic developments to provide a comprehensive view of political disorder. Its global scope and focus on sub-national analysis make it a primary resource for researchers, humanitarian agencies, and policymakers tracking conflict trends and early warning signs. [@ACLED2023political]
+
+**Mediacloud** is an open-source platform for media analysis. Containing a large variety of curated databases spanning social media, news articles, and press releases, the collection of databases is highly searchable. The Mediacloud API can be used to search temporally and by keyword to return hits with context for use in natural language processing, as well as performing frequency analysis. The homogenation of search syntax allows for many disparate news sources to be search and collated simultaneously, making it ideal for imputation context additions. [@roberts2021mediacloud]
+
+```{r setup, include=FALSE}
+## Libraries
+library(lmtest)   # LM comparison
+library(sandwich) # vcovHC lives here
+library(ggplot2)  # Plots
+library(stargazer)# Multiple RSEs
+library(knitr)    # Nice table
+library(AER)      # Canned data for testing
+library(dplyr)    # Slice and dice data
+library(readr)    # Load CSVs fancier
+library(lubridate)# Date/Time formatting
+library(tidyr)
+library(purrr)    # Additional dataframe translations
+library(knitr)    # Basic table formatting
+library(kableExtra)
+library(webshot2) # export images for knitr
+library(magick)   # Improve quality of exported tables
+library(ggExtra)  # More cool plots
+library(mice)     # R built-in logic to handle MICE for nperps
+library(Metrics)  # For RMSE and MAE calculations
+library(caret)    # Confusion matrix
+library(broom)    # Forest Plot
+```
+
+```{r data_load, include=FALSE}
+## Data Load (Get a cuppa coffee...)
+gtd_full <- read.csv('.\\Data\\globalterrorismdb_0522dist.csv')
+acled_full <- read.csv('.\\Data\\ACLED_Data_2026-02-08.csv')
+```
+
+```{r data_shape, include=FALSE}
+# Replace GTD missing value codes (-99) with NA
+gtd_full <- gtd_full %>%
+  mutate(
+    nperps = ifelse(nperps == -99 | nperps == "Unknown", NA, nperps),
+    nkill = ifelse(nkill == -99 | nkill == "Unknown", NA, nkill),
+    nkillus = ifelse(nkillus == -99 | nkillus == "Unknown", NA, nkillus),
+    nkillter = ifelse(nkillter == -99 | nkillter == "Unknown", NA, nkillter),
+    nwound = ifelse(nwound == -99 | nwound == "Unknown", NA, nwound),
+    gname = ifelse(gname == -99 | gname == "Unknown", NA, gname),
+    gname2 = ifelse(gname2 == -99 | gname2 == "Unknown", NA, gname2),
+    gname3 = ifelse(gname3 == -99 | gname3 == "Unknown", NA, gname3),
+    attacktype1 = ifelse(attacktype1 == -99 | attacktype1 == "Unknown", NA, attacktype1),
+    weaptype1 = ifelse(weaptype1 == -99 | weaptype1 == "Unknown", NA, weaptype1),
+    targtype1 = ifelse(targtype1 == -99 | targtype1 == "Unknown", NA, targtype1),
+    suicide = ifelse(suicide == -99 | suicide == "Unknown", NA, suicide),
+    region = ifelse(region == -99 | region == "Unknown" | region == "", NA, region),
+    motive = ifelse(motive == -99 | motive == "motive" | motive == "", NA, motive)
+  )
+
+## Shape the GTD and to the same time bounds as the ACLED (2000-2021)
+gtd_clean <- gtd_full %>%
+  # Remove rows where month or day is 0 (unknown) so we can make valid dates
+  filter(imonth > 0, iday > 0) %>%
+  mutate(
+    event_date = make_date(iyear, imonth, iday),
+    lat_round = round(latitude, 1),
+    long_round = round(longitude, 1)
+  ) %>%
+  filter(event_date >= as.Date("2000-01-01") & event_date <= as.Date("2021-01-01")) %>%
+  filter(is.na(nperps) | nperps < 50)
+
+acled_clean <- acled_full %>%
+  mutate(
+    event_date = as.Date(event_date),
+    lat_round = round(latitude, 1),
+    long_round = round(longitude, 1)
+  )
+
+# Identify Shared Rows and consolidate
+shared_events <- inner_join(
+  acled_clean, 
+  gtd_clean, 
+  by = c("event_date", "lat_round", "long_round"),
+  suffix = c("_acled", "_gtd")
+)
+
+print(paste("Number of shared events found:", nrow(shared_events)))
+head(shared_events)
+```
+
+```{r gtd_missingness, include=FALSE}
+gtd_target_cols <- c("gname", "nperps", "nkill", "nwound", "motive")
+gtd_target_col_labels <- c("Group Name", "Number of Perpetrators", "Number Killed", "Number Wounded", "Motive")
+  
+gtd_missing_data_summary <- gtd_clean %>%
+  select(all_of(gtd_target_cols)) %>%
+  summarise(across(everything(), ~ mean(is.na(.)) * 100)) %>%
+  # Reshape data from wide to long format for plotting
+  pivot_longer(cols = everything(), 
+               names_to = "Column", 
+               values_to = "Missing_Pct") %>%
+  mutate(Column = reorder(Column, -Missing_Pct))
+```
+
+Examining the GTD data and existing research [@Abdalsalam2024], I identified that the GTD data spanning from 2000-2021 has a number of critical fields such as Group name and casualty information that have a high level of missingness. These fields are my primary candidates for imputation, and group name in particular has value in identifying not only groups involved, but also in establishing which attacks currently defined as "unknown" could instead be attributed to independent "Lone Wolf" attackers, the propensity of which is increasing over time and represents a significant threat for counterterrorism law enforcement [@bakker2010lonewolves].
+
+```{r gtd_plot}
+#| label: fig1
+#| fig-cap: "Select fields ordered by their percentage of missingness in the GTD"
+
+ggplot(gtd_missing_data_summary, aes(x = Column, y = Missing_Pct)) +
+  geom_col(fill = "steelblue", alpha = 0.8) +
+  geom_text(aes(label = sprintf("%.1f%%", Missing_Pct)), 
+            vjust = -0.5, size = 3.5) +
+  scale_y_continuous(limits = c(0, 100), expand = expansion(mult = c(0, 0.1))) +
+  scale_x_discrete(labels = gtd_target_col_labels) +
+  labs(
+    title = "GTD: Percentage of Missing Data by Column",
+    subtitle = "Includes NA values and 'Unknown' strings",
+    x = "Column Name",
+    y = "Missing Percentage (%)"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold")
+  )
+```
+
+```{r acled_missingness, include=FALSE}
+acled_target_cols <- c("actor1", "actor2", "inter1", "inter2")
+aclet_target_col_labels <- c("Primary Actor", "Secondary Actor", "Interactor", "Secondary Interactor")
+
+acled_missingness_summary <- acled_clean %>%
+  select(all_of(acled_target_cols)) %>%
+  summarise(across(everything(), function(x) {
+    # Calculate percentage where ANY of these conditions are true:
+    mean(
+      is.na(x) |                        # Standard NA
+      x == "" |                         # Empty string
+      grepl("^\\s*$", x) |              # String with only whitespace
+      grepl("Unidentified", x, ignore.case = TRUE) # Contains "Unidentified"
+    ) * 100
+  })) %>%
+  pivot_longer(everything(), names_to = "Column", values_to = "Missing_Pct")
+```
+
+The ACLED database provides valuable context to the GTD when collated by location and time. The ACLED includes details on news sources describing the attribution [@ACLEDcodebook2025] information as well as detailed actor information. While the ACLED contains nearly significantly more entries for the same time period, it is important to note the difference in membership criterion. The GTD contains information on confirmed non-state terrorist attacks where money was not the primary goal of the attack [@GTD2007introducing]; the ACLED has a much broader selection criterion including state actors and independent militias, as well as protest and riots that would be excluded from the GTD. A joined database of shared records brings the intersecting rows down to 20,782 records, removing 118,850 records from the potential comparison pool. As a result, my imputation workflow will be run on the standalone GTD dataset as well as a joined dataset, giving opportunities for accuracy comparisons between the two, holding the workflow process consistent.
+
+```{r acled_plot}
+#| label: fig2
+#| fig-cap: "Select fields ordered by their percentage of missingness in the ACLED"
+
+ggplot(acled_missingness_summary, aes(x = Column, y = Missing_Pct)) +
+  geom_col(fill = "steelblue", alpha = 0.8) +
+  geom_text(aes(label = sprintf("%.1f%%", Missing_Pct)), 
+            vjust = -0.5, size = 3.5) +
+  scale_y_continuous(limits = c(0, 100), expand = expansion(mult = c(0, 0.1))) +
+  scale_x_discrete(labels = aclet_target_col_labels) +
+  labs(
+    title = "ACLED: Percentage of Missing Data by Column",
+    subtitle = "Includes NA values and 'Unknown' strings",
+    x = "Column Name",
+    y = "Missing Percentage (%)"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold")
+  )
+```
+
+```{r mice_nperps, include=FALSE}
+# Generate full predictor matrix, divide nperps into categorical variable
+gtd_clean <- gtd_clean %>%
+  mutate(nperps = if_else(suicide == 1 & is.na(nperps), 1, nperps)) %>%
+  mutate(
+    nperps_cat = case_when(
+      nperps == 1 ~ "Lone Wolf",
+      nperps > 1 & nperps <= 5 ~ "Small Cell",
+      nperps > 5 ~ "Large Group",
+      # Leave as NA where the original nperps is NA
+      TRUE ~ NA_character_ 
+    )
+  ) %>%
+  # MICE requires categorical targets to be explicitly defined as factors
+  mutate(nperps_cat = as.factor(nperps_cat))
+# Select only the columns needed for the imputation model to save memory/time
+impute_data <- gtd_clean %>%
+  select(eventid, nperps, nperps_cat, nkill, nwound, attacktype1, weaptype1, targtype1, suicide, region, country, iyear, country_txt, region_txt, provstate)
+
+# Convert categorical variables to factors
+categorical_vars <- c("nperps_cat", "attacktype1", "weaptype1", "targtype1", "suicide", "region", "country", "country_txt", "region_txt", "provstate")
+impute_data[categorical_vars] <- lapply(impute_data[categorical_vars], factor)
+
+dry_run <- mice(impute_data, maxit = 0, printFlag = FALSE)
+pred_mat <- dry_run$predictorMatrix
+imp_methods <- dry_run$method
+imp_methods["nperps"] <- "pmm" # Use whole numbers and avoid skew
+imp_methods[imp_methods != ""] <- "rf"
+# If the attack was a suicide attack, we can reasonably assume the attackers is
+# at least 1
+imp_methods["nperps"] <- "~I(ifelse(suicide == 1 & is.na(nperps), 1, nperps))"
+vars_to_exclude <- c("eventid", "country_txt", "region_txt", "provstate")
+pred_mat[, vars_to_exclude] <- 0
+pred_mat[vars_to_exclude, ] <- 0
+
+# MICE with varied methods by variable
+final_imputation <- mice(impute_data, 
+                         m = 5, 
+                         maxit = 10, 
+                         method = imp_methods, 
+                         predictorMatrix = pred_mat, 
+                         seed = 101)
+
+logistic_models <- with(final_imputation, 
+                        glm(nperps_cat == "Lone Wolf" ~ attacktype1 + weaptype1 + targtype1 + suicide + region, 
+                            family = binomial))
+
+pooled_results <- pool(logistic_models)
+```
+
+```{r mice_accuracy, include=FALSE}
+# Map over final methodologies
+pred_mat <- final_imputation$predictorMatrix
+imp_methods <- final_imputation$method
+
+# Confusion matrix of MICE process against nperps_cat
+truth_data <- impute_data %>% filter(!is.na(nperps_cat))
+set.seed(101)
+masked_data <- truth_data
+mask_indices <- sample(1:nrow(masked_data), size = floor(0.3 * nrow(masked_data)))
+true_categories <- masked_data$nperps_cat[mask_indices]
+masked_data$nperps_cat[mask_indices] <- NA
+
+eval_imputation <- mice(masked_data, 
+                        m = 1, # 1 dataset is sufficient for the evaluation run
+                        maxit = 5, 
+                        method = imp_methods, 
+                        predictorMatrix = pred_mat, 
+                        seed = 123)
+```
+
+``` {r conf_table}
+#| label: fig3
+#| fig-cap: "Performance Metrics of MICE Imputation by Category"
+completed_eval_data <- complete(eval_imputation, 1)
+imputed_categories <- completed_eval_data$nperps_cat[mask_indices]
+
+# Generate the Confusion Matrix
+# It is critical to ensure both vectors have the exact same factor levels
+imputed_categories <- factor(imputed_categories, levels = c("Lone Wolf", "Small Cell", "Large Group"))
+true_categories <- factor(true_categories, levels = c("Lone Wolf", "Small Cell", "Large Group"))
+conf_matrix <- confusionMatrix(data = imputed_categories, reference = true_categories)
+print(conf_matrix)
+
+# Extract Metrics and Format Summary Table
+# Extracting Sensitivity and Specificity, and calculating the percentage difference 
+# from the previous row based on Sensitivity.
+metrics_table <- as.data.frame(conf_matrix$byClass[, c("Sensitivity", "Specificity")])
+metrics_table$Class <- gsub("Class: ", "", rownames(metrics_table))
+metrics_table <- metrics_table %>%
+  mutate(
+    `Pct Diff in Sensitivity from Prev Row` = sprintf("%.2f%%", (Sensitivity - lag(Sensitivity)) / lag(Sensitivity) * 100)
+  ) %>%
+  select(Class, Sensitivity, Specificity, `Pct Diff in Sensitivity from Prev Row`)
+
+metrics_table <- metrics_table %>%
+  mutate(
+    `Pct Diff in Sensitivity from Prev Row` = replace_na(`Pct Diff in Sensitivity from Prev Row`, "-")
+  )
+    
+# Generate the table
+metrics_table %>%
+  kbl(
+    caption = "Performance Metrics of MICE Imputation by Category",
+    booktabs = TRUE, # Essential for the clean, academic look (LaTeX/PDF)
+    digits = 3,
+    align = c("l", "c", "c", "c", "C")
+  ) %>%
+  kable_classic(full_width = FALSE, html_font = "Cambria") %>%
+  add_header_above(c(" " = 1, "Performance Metrics" = 4)) %>%
+  footnote(general = "Pct Diff compares the sensitivity of the current row to the row above it.")
+```
+
+``` {r conf_plot}
+#| label: fig4
+#| fig-cap: "Confusion Matrix for Imputed Categories"
+cm_df <- as.data.frame(conf_matrix$table)
+ggplot(cm_df, aes(x = Reference, y = Prediction, fill = Freq)) +
+  geom_tile(color = "black", alpha = 0.8) +
+  geom_text(aes(label = Freq), size = 6, color = ifelse(cm_df$Freq > mean(cm_df$Freq), "white", "black")) +
+  scale_fill_gradient(low = "white", high = "#2C3E50") +
+  theme_minimal() +
+  labs(
+    title = "Confusion Matrix for Imputed Categories",
+    x = "True Category (Reference)",
+    y = "Imputed Category (Prediction)",
+    fill = "Count"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 12, face = "bold")
+  )
+```
+
+```{r mice_}
+#| label: fig5
+#| fig-cap: "Predictors of Independent Actor (Lone Wolf) Terrorism"
+# Tidy the data and calculate Odds Ratios at 95% confidence
+plot_data <- tidy(pooled_results, conf.int = TRUE, exponentiate = TRUE)
+plot_data <- plot_data %>%
+  # Remove the Intercept, as it only represents the baseline odds and skews the plot
+  filter(term != "(Intercept)") %>%
+  mutate(
+    category = case_when(
+      grepl("attacktype", term) ~ "Attack Type",
+      grepl("suicide", term) ~ "Attack Type",
+      grepl("weaptype", term) ~ "Weapon Type",
+      grepl("targtype", term) ~ "Target Type",
+      grepl("region", term) ~ "Region",
+      TRUE ~ "Other"
+    ),
+    clean_term = case_when(
+# Attack Types 
+      term == "attacktype11" ~ "Assassination",
+      term == "attacktype12" ~ "Armed Assault",
+      term == "attacktype13" ~ "Bombing/Explosion",
+      term == "attacktype14" ~ "Hijacking",
+      term == "attacktype15" ~ "Hostage Taking (Barricade)",
+      term == "attacktype16" ~ "Hostage Taking (Kidnapping)",
+      term == "attacktype17" ~ "Facility/Infrastructure Attack",
+      term == "attacktype18" ~ "Unarmed Assault",
+      term == "attacktype19" ~ "Unknown",
+      term == "suicide1" ~ "Suicide Attack",
+      
+      # Weapon Types
+      term == "weaptype11" ~ "Biological",
+      term == "weaptype12" ~ "Chemical",
+      term == "weaptype13" ~ "Radiological",
+      term == "weaptype14" ~ "Nuclear",
+      term == "weaptype15" ~ "Firearms",
+      term == "weaptype16" ~ "Explosives",
+      term == "weaptype17" ~ "Fake Weapons",
+      term == "weaptype18" ~ "Incendiary",
+      term == "weaptype19" ~ "Melee",
+      term == "weaptype110" ~ "Vehicle",
+      term == "weaptype111" ~ "Sabotage Equipment",
+      term == "weaptype112" ~ "Other",
+      term == "weaptype113" ~ "Unknown",
+      
+      # Target Types
+      term == "targtype11" ~ "Business",
+      term == "targtype12" ~ "Government (General)",
+      term == "targtype13" ~ "Police",
+      term == "targtype14" ~ "Military",
+      term == "targtype15" ~ "Abortion Related",
+      term == "targtype16" ~ "Airports & Aircraft",
+      term == "targtype17" ~ "Government (Diplomatic)",
+      term == "targtype18" ~ "Educational Institution",
+      term == "targtype19" ~ "Food or Water Supply",
+      term == "targtype110" ~ "Journalists & Media",
+      term == "targtype111" ~ "Maritime",
+      term == "targtype112" ~ "NGO",
+      term == "targtype113" ~ "Other",
+      term == "targtype114" ~ "Private Citizens & Property",
+      term == "targtype115" ~ "Religious Figures/Institutions",
+      term == "targtype116" ~ "Telecommunication",
+      term == "targtype117" ~ "Terrorists/Non-State Militia",
+      term == "targtype118" ~ "Tourists",
+      term == "targtype119" ~ "Transportation",
+      term == "targtype120" ~ "Unknown",
+      term == "targtype121" ~ "Utilities",
+      term == "targtype122" ~ "Violent Political Parties",
+
+      # Regions 
+      term == "region1" ~ "North America",
+      term == "region2" ~ "Central America & Caribbean",
+      term == "region3" ~ "South America",
+      term == "region4" ~ "East Asia",
+      term == "region5" ~ "Southeast Asia",
+      term == "region6" ~ "South Asia",
+      term == "region7" ~ "Central Asia",
+      term == "region8" ~ "Western Europe",
+      term == "region9" ~ "Eastern Europe",
+      term == "region10" ~ "Middle East & North Africa",
+      term == "region11" ~ "Sub-Saharan Africa",
+      term == "region12" ~ "Australasia & Oceania",
+      
+      TRUE ~ term 
+    )
+  ) %>%
+  # Filter out the Radiological outlier causing the X-axis blowout
+  # "Radiological weapons were excluded from the logistic regression visualization due to quasi-complete separation caused by insufficient event frequency
+  filter(clean_term != "Radiological")
+
+forest_plot_quad <- ggplot(plot_data, aes(x = estimate, y = reorder(clean_term, estimate), color = category)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "darkgrey", size = 1) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2, color = "#2C3E50", size = 0.8) +
+  geom_point(size = 3, color = "#E74C3C") +
+  scale_x_log10() + # Use a logarithmic scale for the X-axis
+  facet_wrap(~ category, scales = "free_y", ncol = 2) + # 4 times the chart, bruv
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    title = "Predictors of Independent Actor (Lone Wolf) Terrorism",
+    subtitle = "Odds Ratios with 95% Confidence Intervals (Pooled from MICE)",
+    x = "Odds Ratio (Log Scale)",
+    y = ""
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_text(size = 10, face = "bold"),
+    plot.title = element_text(face = "bold", size = 16),
+    strip.text = element_text(face = "bold", size = 12),
+    legend.position = "none"
+  )
+
+ggsave("forest_plot_lone_wolf.png", plot = forest_plot_quad, width = 12, height = 10, dpi = 300)
+```
+
+\clearpage
+
+# Annotated Bibliography
+
+*Note: I have done extensive searching for related works, background methods, and a variety of techniques. I think it's unlikely that I will use all of these references in the final paper, but I had to undertake significant research to understand the most recent breakthroughs in data imputation and studies against the GTD.*
+
+## **Background References**
+
+This research brief from the National Consortium for the Study of Terrorism and Responses to Terrorism (START), titled “**Anti-State Terrorist Plots and Attacks in the United States**” examines a significant escalation in anti-state plots and attacks within the United States between 1992 and 2022. By analyzing data from the PIRUS project, the authors reveal that anti-government extremists have driven recent violence to historical highs, increasingly through lone-actor operations rather than organized groups. The text highlights a unique profile for these offenders, noting they are typically older, more socially established, and possess military backgrounds at rates far exceeding the general population [@jensen2024antistate].
+
+This research paper by the International Centre for Counter-Terrorism investigates the lone wolf phenomenon, defined as individuals who commit politically or religiously motivated violence without formal ties to a parent organization. The article, titled “**Lone Wolves: How to prevent this phenomenon?”** describes a crucial confounder in the GTD and many papers analyzing its data, which is that individual attacks from lone wolves aren’t able to be easily predicted using the terrorist-group focused fields of the dataset. The authors explore how these actors pose a unique detection challenge for intelligence services because they lack a communicative network, even though they often share common psychological traits and ideological inspirations found on the internet. By analyzing the tactical shift toward leaderless resistance across various extremist backgrounds, the text seeks to move beyond traditional profiling by focusing on the operational behaviors and radicalization triggers of these solitary attackers [@bakker2010lonewolves].
+
+## **Contextual References**
+
+This paper from 2024 titled “**A Review of Challenges and Solutions for Using Machine Learning Approaches for Missing Data**” explores the common problems encountered by researchers handling holes in datasets, and what impacts mitigation strategies have on outcomes. The author categorizes the mechanisms of missingness—MCAR, MAR, and NMAR—to provide a conceptual framework for selecting appropriate recovery strategies like MICE, Random Forest, and Generative Adversarial Networks. Beyond simple techniques, the text explores critical hurdles such as handling heterogeneous data, managing high dimensionality, and addressing imbalanced datasets where minority classes are at risk of bias. To ensure data integrity, the paper advocates for task-specific evaluation metrics and robustness testing rather than relying solely on standard error calculations [@wani2024review].
+
+Examining “**A novel ranked k-nearest neighbors algorithm for missing data imputation”,** This research paper introduces the Ranked k-Nearest Neighbors (RkNN) algorithm, a refinement of traditional machine learning techniques designed to estimate missing information in complex datasets. While the standard kNN approach relies on simple proximity to fill gaps, it can fail when variables are weakly correlated or when only a few neighbors are in range. The authors are better able to handle data variability and reduce error via their implementation of Ranked Set Sampling. Extensive testing on both simulated environments and real-world economic data demonstrates that this new algorithm provides superior imputation accuracy across various types of data loss [@Khan2024].
+
+“**Benchmarking missing-values approaches for predictive models on health databases**” presents a comprehensive systematic benchmark evaluating how different machine learning strategies handle missing values in large-scale healthcare databases. By analyzing thirteen prediction tasks across four major health datasets, the authors conclude that tree-based models utilizing Missing Incorporated in Attributes (MIA) offer the best balance of accuracy and speed. While complex multiple imputation and bagging can slightly improve performance, they are often computationally prohibitive compared to the efficiency of native support for missing data. The study highlights that adding a missingness indicator or "mask" significantly boosts accuracy, suggesting that the absence of data in medical records often contains informative patterns that are crucial for predictive modeling [@PerezLebel2022].
+
+In the “**Practical guide to SHAP analysis: Explaining supervised machine learning model predictions in drug development**”, The authors describe the essential requirement of SHapley Additive exPlana-tions (SHAP), a powerful tool designed to demystify the "black-box" nature of machine learning models. SHAP allows authors to describe their process and improve reproducibility, which will be essential for my research replicating prior imputation methods used against the GTD. The process relies on dividing and representing the impact of each workflow step’s incremental impact on the final model’s predictive power or methodology [@PonceBobadilla2024].
+
+Štrumbelj and Kononenko discuss the process of evaluating the impact of ensemble models in the final product in their paper “**An Efficient Explanation of Individual Classifications using Game Theory**”. By adapting the Shapley value, the authors quantify the "fair" contribution of each feature value to a specific classification outcome, effectively revealing how much each variable influences a model's decision. To resolve the exponential time complexity typically associated with these calculations, the paper proposes a sampling-based approximation method that makes the technique computationally feasible for complex datasets [@JMLR:v11:strumbelj10a].
+
+On the subject of data imputation, this article from an adjacent dataset titled “**Final Report: Empirical Assessment of Domestic Radicalization (EADR)**” provides value on handling data imputation and prediction. The report, funded by the National Institute of Justice, provides an empirical assessment of domestic radicalization in the United States by utilizing the PIRUS database to analyze the backgrounds and behaviors of extremists. The study employs a dual-methodological approach, combining multivariate regression models with fuzzy-set Qualitative Comparative Analysis (fs/QCA) to identify the specific causal pathways that lead individuals toward violent versus non-violent extremism. A significant portion of the text is dedicated to rigorous data calibration and missing data strategies, ensuring that the findings regarding factors like criminal history, mental health, and social cliques are statistically robust [@jensen2016final].
+
+The paper “**Multi-behavioral Sequential Prediction with Recurrent Log-bilinear Model**” attempts to address the complexity of how users interact with items over time. Traditional models often struggle to differentiate between various actions such as downloading versus uninstalling an app, and fail to capture the non-monotonic influence of past behaviors on future choices. To solve this, the authors introduce the Recurrent Log-Bilinear (RLBL) model and its time-aware variant (TA-RLBL), which use position-specific and behavior-specific matrices to better represent short-term and long-term context. By incorporating temporal differences and specialized transition matrices, these models significantly outperform standard methods in accurately forecasting a user’s next specific action across diverse real-world datasets [@Liu2016].
+
+Another imputation pathway would be the use of Multiple Imputation Ensembles (MIE). Aleryani et. all’s paper “**Multiple Imputation Ensembles (MIE) for dealing with missing data**” describes a robust framework designed to improve the accuracy of machine learning classification when datasets contain missing data. In merging multiple imputation techniques with ensemble methods, the authors create a system where multiple models collaborate to produce a superior final prediction. The study rigorously tests this approach against traditional strategies, such as simple imputation and internal algorithm mechanisms, using twenty diverse benchmark datasets with varying levels of data Missing Completely At Random (MCAR). To assess quality, the researchers utilize dissimilarity measures to determine how closely the imputed values resemble the original information [@Aleryani2020].
+
+## **Prior Work References**
+
+The Meta-Imputation Balanced (MIB) framework shows a lot of promise for missing data generation. This paper, titled “**Meta-Imputation Balanced (MIB): An Ensemble Approach for Handling Missing Data in Biomedical Machine Learning**” describes how MIB functions as an ensemble approach that intelligently combines the outputs of multiple base imputers using a supervised meta-model. By training on data where values have been intentionally hidden, the system learns to weigh different imputation strategies to produce the most accurate and stable estimates for the missing entries. Experimental results across various biomedical datasets demonstrate that this context-aware strategy consistently achieves high accuracy and maintains strong downstream predictive performance, proving more reliable than individual traditional or modern methods [@Azad2025].
+
+Another option for Imputation is DeepIFSAC or GAIN, which this article contrasts alongside other techniques. Titled “**DeepIFSAC: Deep Imputation of Missing Values Using Feature and Sample Attention within Contrastive Framework**” the article describes a sophisticated deep learning framework designed for missing value imputation in tabular datasets where data is often incomplete. The model utilizes a novel joint attention mechanism that simultaneously analyzes relationships between features (columns) and between samples (rows) to accurately estimate missing information. To enhance robustness, the authors incorporate CutMix data augmentation and contrastive learning, which helps the system distinguish similar data patterns and better handle non-random missing data. Extensive benchmarking across diverse datasets demonstrates that this method consistently outperforms state-of-the-art statistical and machine learning models, particularly when missingness is high [@Kowsar2025].
+
+The 2021 paper is part of a series by Mohammed Abdalasam. “**A Study of the Effects of Textual Features on Prediction of Terrorism Attacks in GTD Dataset”** examines the textual fields within the GTD to make predictions on other fields, specifically attack types. The authors propose a machine learning framework that combines standard categorical and numerical "key features" with descriptive text summaries of incidents. To process this unstructured text, they utilized various representation techniques, including TF-IDF, Bag of Words, and Word Embedding, and evaluated the performance of nine different machine learning classifiers. Incorporating these textual features significantly enhances accuracy, with the ensemble Bagging classifier and Word2vec embeddings achieving the most effective results in identifying attack patterns [@Abdalsalam2021a].
+
+Abdalasam’s research using the GTD continues in “**Terrorism Attack Classification Using Machine Learning**” to refine the approach of harvesting the textual fields of the dataset to make predictions. The authors argue that traditional analysis often neglects the rich information found in textual summaries within the Global Terrorism Database (GTD), which can significantly enhance a model's predictive accuracy. To bridge this gap, they utilize DistilBERT, a transformer-based model, to extract deep contextual and semantic features from raw text descriptions of incidents. These extracted textual features are then integrated with standard numerical and categorical data to train various machine learning classifiers. The study concludes that this hybrid feature approach dramatically outperforms models relying on single data types, achieving a peak classification accuracy of 98.7% using the extreme gradient boosting (XGBoost) algorithm [@Abdalsalam2024].
+
+Abdalasam then used BiGRU-SA, a sophisticated artificial intelligence framework designed to accurately identify the specific terrorist organizations responsible for violent attacks. In their article “**Terrorism group prediction using feature combination and BiGRU with self-attention mechanism**”, the authors combine natural language processing via DistilBERT to analyze incident summaries in the GTD with advanced data balancing techniques like SMOTE-T to ensure fair representation of smaller groups. The study demonstrates that their model, which integrates bidirectional gated recurrent units and self-attention mechanisms, achieves an exceptional 98.68% accuracy rate, significantly outperforming traditional machine learning methods [@Abdalsalam2024a].
+
+The research paper “**Predicting The Unpredictable:** **Reproducible BiLSTM Forecasting of Incidents in the Global Terrorism Database**” details the development of a Bidirectional Long Short-Term Memory (BiLSTM) model designed to provide reliable, short-term forecasts of weekly global terrorism incidents. By leveraging nearly five decades of data from the Global Terrorism Database, the author demonstrates that this deep learning approach significantly outperforms classical statistical benchmarks by capturing complex, non-linear patterns in both the escalation and aftermath of violent events. The study identifies that long-term historical data and rolling statistical features are essential for predictive accuracy, as they allow the model to adapt to the "bursty" and non-stationary nature of geopolitical shifts [@Adegoke2025].
+
+Building on ensemble learning techniques, the paper “**Quantitative Analysis and Prediction of Global Terrorist Attacks Based on Machine Learning**” details the development of a classification framework designed to identify and predict the specific organizations responsible for global terrorist activities. The author applies ensemble learning techniques like XGBoost and Random Forest to the GTD to analyze complex patterns in attack characteristics. The study demonstrates that these machine learning models can achieve high predictive accuracy, particularly for the most active groups, by processing variables such as location, weapon type, and target [@Pan2021].
+
+The curators of the GTD themselves conducted their own research on using natural language processing of raw source data to populate the GTD. The article from the University of Maryland’s Computer Science department, titled “**The Global Terrorism Database: Experiments in Machine-Assisted Data Collection**” tested whether natural language processing could successfully group news reports of the same event and extract specific details without constant human intervention. The findings suggest that while fully automated systems currently lack the precision of human experts, a hybrid human-AI methodology significantly reduces manual workloads and streamlines the coding process [@Colon2024].
+
+New compound fields can be generated against the GTD by analyzing text fields alongside restricting datasets to natural groups. Titled “**Applying Unsupervised Machine Learning to Counterism**”, Bridgelall describes an empirical text mining algorithm to produce a new "motive" field that allows analysts to categorize attacks based on underlying sentiments such as anti-government "rule," race, or religion. The study employs advanced techniques like k-means co-clustering and nonlinear projections to visualize how these motives statistically intersect with specific tactics and targets [@bridgelall2022unsupervised]. 
+
+Brandt et. al. leveraged ConfliBERT to perform natural language processing for data imputation in their research titled “**ConfliBERT: A Language Model for Political Conflict**”. By integrating domain-specific expertise with natural language processing, this model excels at filtering relevant reports, identifying specific events, and performing named entity recognition to categorize key actors. Research demonstrates that ConfliBERT significantly outperforms larger, general-purpose models like Llama and Gemma in accuracy and precision while operating hundreds of times faster [@Brandt2024].
+
+@Cai2025 developed a sophisticated AI-driven tool called FAME (Fingerprint to Article Matching for Events) to systematically track how global media outlets report on natural disasters and terrorist attacks. In their article "**Identifying and Investigating Global News Coverage of Critical Events Such as Disasters and Terrorist Attacks**" By utilizing a "fingerprint" constructed from a specific combination of event class, location, and date, the system filters millions of multilingual articles to identify those covering specific crises without the need for manual training data. This methodology reveals that news coverage is heavily biased toward wealthier nations and those with significant trade ties, often requiring much higher death tolls in poorer regions to receive equivalent attention. Ultimately, this work provides an open-source framework for computational social science to measure and understand the systemic factors that shape the global news agenda.
+
+\clearpage
+
+# References
