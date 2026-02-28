@@ -93,6 +93,10 @@ library(mice)     # R built-in logic to handle MICE for nperps
 library(Metrics)  # For RMSE and MAE calculations
 library(caret)    # Confusion matrix
 library(broom)    # Forest Plot
+library(pscl)     # ZINB regression
+library(remotes)  # Grab repos not on CRAN FORGE
+remotes::install_github("https://github.com/r-forge/countreg", subdir="pkg")
+library(countreg) # rootogram
 ```
 
 ```{r data_load, include=FALSE}
@@ -484,18 +488,105 @@ forest_plot_quad <- ggplot(plot_data, aes(x = estimate, y = reorder(clean_term, 
 ggsave("forest_plot_lone_wolf.png", plot = forest_plot_quad, width = 12, height = 10, dpi = 300)
 ```
 ``` {r complete_full_data, include=FALSe}
-# Hydrate the final model into a full copy of the GTD dataset, mapping over via eventid
-completed_data <- complete(final_imputation, action = "long")
-imputed_subset <- completed_data %>%
-  select(eventid, nperps, nperps_cat, nkill, nwound)
+# Extract all 5 models, then average and consolidate, to attempt to reduce variance
+imputed_long <- complete(final_imputation, action = "long")
+imputed_averaged <- imputed_long %>%
+  group_by(eventid) %>%
+  summarise(
+    # Calculate the mean and round to the nearest whole number
+    nperps_avg = round(mean(nperps)),
+    nkill_avg = round(mean(nkill)),
+    nwound_avg = round(mean(nwound))
+  ) %>%
+  ungroup() %>%
+  # Rebuild nperps_cat
+  mutate(
+    nperps_cat = case_when(
+      nperps_avg == 1 ~ "Lone Wolf",
+      nperps_avg > 1 & nperps_avg <= 5 ~ "Small Cell",
+      nperps_avg > 5 ~ "Large Group",
+      TRUE ~ NA_character_
+    ),
+    nperps_cat = as.factor(nperps_cat)
+  )
 
 gtd_clean_final <- gtd_clean %>%
   select(-c(nperps, nperps_cat, nkill, nwound)) %>%
-  left_join(imputed_subset, by = "eventid")
+  left_join(imputed_averaged, by = "eventid") %>%
+  rename(
+    nperps = nperps_avg,
+    nkill = nkill_avg,
+    nwound = nwound_avg
+  )
 
-# Verify the missingness is gone
-summary(gtd_clean_final$nperps)
+# Verify the final structure
+str(gtd_clean_final %>% select(eventid, nperps, nperps_cat, nkill, nwound))
+rm(imputed_long)
+rm(imputed_averaged)
 ```
+
+``` {r nperps_on_nkill, include=FALSE}
+# Evaluate the effects of perpetrator group size on the number of individuals killed in the attack
+kruskal.test(nkill ~ nperps_cat, data = gtd_clean_final)
+# Result is near-zero, so what is the relationship between category and nkill?
+pairwise.wilcox.test(gtd_clean_final$nkill, gtd_clean_final$nperps_cat,
+                     p.adjust.method = "holm")
+```
+
+# Results
+
+A Kruskal-Wallis rank sum test was conducted to determine if there were differences in the number of casualties (nkill) based on the size of the perpetrator group. The results indicated a highly significant difference in the distribution of casualties between Lone Wolf, Small Cell, and Large Group attacks ($H(2) = 1136.6, p < 0.001$). To determine where the significant differences in casualties lay among the perpetrator categories, a post-hoc pairwise Wilcoxon rank sum test was conducted using the Holm method to control for multiple comparisons. The analysis revealed that Lone Wolf attacks resulted in significantly different casualty distributions when compared to both Small Cells ($p < 0.001$) and Large Groups ($p < 0.001$). Notably, there was no statistically significant difference in fatalities between Small Cells and Large Groups ($p = 0.53$). This suggests a critical threshold effect in terrorist operations: while independent actors exhibit a distinct lethality profile, the introduction of even a small network (2-5 perpetrators) shifts the casualty distribution to match that of large-scale group attacks. Consequently, casualty metrics serve as a strong discriminator for imputing independent actors, but offer diminishing returns when attempting to differentiate the size of multi-perpetrator networks.
+
+When examining the effect that tactics and group composition has on casualities in terror attacks, the extreme overdispersion of casualties means that a standard regression underestimates the standard errors, leading to false significance. This is a particular risk when considering the imputed dataset. As a result, I employed a Zero-inflated negative binomial (ZINB) model to examine the relationship between nkill and the other predictors. The ZINB model seperates the structurally missing (data not determined by GTD) data from the attack data where the attack was a failure.
+
+``` {r zinb_model, include=FALSE}
+# Blessed be stack overflow, praise always to those who have figured this out before me
+zinb_models <- with(final_imputation, 
+                    zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
+                             dist = "negbin"))
+
+# pool to consolidate results
+pooled_zinb_results <- pool(zinb_models)
+
+# View the raw summary
+summary(pooled_zinb_results)
+# Extract the results
+zinb_analysis <- tidy(pooled_zinb_results, conf.int = TRUE)
+
+# Separate the models for easier exponentiation and reading
+count_model_results <- zinb_analysis %>% filter(component == "count")
+zero_model_results <- zinb_analysis %>% filter(component == "zero")
+
+# Exponentiate the count model to get Incidence Rate Ratios (IRRs)
+count_model_irrs <- count_model_results %>%
+  mutate(estimate_irr = exp(estimate),
+         conf.low_irr = exp(conf.low),
+         conf.high_irr = exp(conf.high))
+
+# Exponentiate the zero model to get Odds Ratios (ORs)
+zero_model_ors <- zero_model_results %>%
+  mutate(estimate_or = exp(estimate),
+         conf.low_or = exp(conf.low),
+         conf.high_or = exp(conf.high))
+```
+
+```{r rootogram, include=FALSE}
+#| label: fig6
+#| fig-cap: "Negative Binomial Regressions: nkill"
+# ZINB model
+plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
+                      data = gtd_clean_final, dist = "negbin")
+
+# Standard Negative Binomial for comparison
+plot_nb <- glm.nb(nkill ~ nperps_cat + region + attacktype1 + weaptype1, 
+                  data = gtd_clean_final)
+
+# Generate the plots
+par(mfrow = c(1, 2)) # Put plots side-by-side
+rootogram(plot_nb, main = "Standard Negative Binomial")
+rootogram(plot_zinb, main = "Zero-Inflated Negative Binomial")
+```
+
 \clearpage
 
 # Annotated Bibliography
