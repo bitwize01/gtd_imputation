@@ -40,58 +40,35 @@ Your rough draft should be about 10 pages and should represent good progress tow
 The rough draft is evaluated on a complete/incomplete basis. Failure to submit a timely draft may be reflected in the final course grade. The instructor will provide feedback.
 
 # Introduction
+The compound societal and economic issues inflicted upon a community by a terrorist attack are profound, and leave lasting scars that affect the stability of a region. Predicting terrorist attacks and establishing a model that connects terrorist actors to outcomes is a much-researched problem with often no clear solution [@wani2024review]. However, as statistical learning has rapidly opened new research pathways into modeling existing data sources, new options for research have emerged. A key weakness in research into terrorism is data quality: the 'missingness' of data is an inherent issue with documenting real world events, particularly violent ones where denial and deception methods are employed to hamper law enforcement. The greatest difficulty for law enforcement is the proactive identification and capture of the "Lone Wolf" terrorist, who acts alone and does not reveal their plans before their attack. In this paper, I examine the efficacy of using Data Imputation to synthesize and classify data from the Global Terrorism Database (GTD), with a focus on identifying the number of perpetrators involved in a terrorist attack. I sought to explore the difference in lethality, tactics, and outcomes of individuals performing attacks by themselves as compared to attacks perpetuated by multiple attackers. In producing a lens through which the impact and profile of "Lone Wolves" can be approached by counterterrorism researchers, methods of identification and risk assessment can be performed.
 
-The compound soceital and economic issues inflicted upon a community by a terrorist attack are profound, and leave lasting scars that affect the stablility of a region. Predicting terrorist attacks and establishing a model that connects terrorist actors to outcomes is a much-researched problem with often no clear solution [@wani2024review]. However, as statistical learning has rapidly opened new research pathways into modeling existing data sources, new options for research have emerged. A key weakness in research into terrorism is data quality: the 'missingness' of data is an inherrent issue with documenting real world events, particularly violent ones where denial and dception methods are employed to hamper law enforcement. The greatest difficulty for law enforcement is the proactive dientification and capture of the "Lone Wolf" terrorist, who acts alone and does not reveal thieir plans before their attack. In this paper, I examine the efficacy of using Data Imputation to synthesize and classify data from the Global Terrorism Database (GTD), with a focus on identifying the number of perpetrators involved in a terrorist attack. I sought to explore the difference in lethality, tactics, and outcomes of individuals performing attacks by themselves as compared to attacks perpetuated by multiple attackers.
+The term “lone wolf” was popularized in the late 1990s by white supremacists Tom Metzger and Alex Curtis as part of an encouragement to fellow racists to act alone in committing violent crimes for tactical reasons [@bakker2010lonewolves]. The incidence of Lone Wolves is incredibly low in comparison to other violent actors. Bakker and deGraaf in 2010 described the presence of Lone Wolves in the historical data as "black swans" with a confirmed incidence in the RAND-MIPT Terrorism Knowledge Base (another database similar to the GTD) of only 1.28%. This proportion has changed dramatically for Western Countries, with the institute for Economics and Peace reporting that 93% of the fatalities in western countries in 2025 were perpetuated by lone wolves [@iep2025terrorism]. This reveals the critical need for longitudinal analysis of the evolving nature of lone wolves, even if the overall data contained in the dataset as-is does not contain immediately compatible data. My analysis of the available data has indicated a statistically significant difference in attacks and methods, but no difference in the level of fatilities per attack, indicating that individuals can perpetuate violent attacks with similar outcomes to large groups, although the rate of their attacks that fail are significantly higher.
 
-I began by first examining these missing fields and identifying candidates for imputation with the Global Terrorism Database. Then, after categorizing attacks by individual, small and large groups, I examine the outcomes, tactics, and methods employed by individuals, producing a lens through which the impact and profile of "Lone Wolves" can be approached by counterterrorism researchers.
-
-:::: column-margin
-::: callout-tip
 ## About the Global Terrorism Database
-
 The systematic quantification of political violence relies upon the structural integrity of longitudinal archives, among which the Global Terrorism Database (GTD) serves as the preeminent unclassified repository for researchers, policymakers, and security analysts [@Abdalsalam2024a]. Maintained by the National Consortium for the Study of Terrorism and Responses to Terrorism (START), the GTD documents over 180,000 incidents since 1970, capturing more than 130 variables for contemporary events, ranging from tactical specifics to perpetrator identities and casualty metrics [@GTD2026]. Despite its breadth, the utility of the GTD is persistently challenged by the "missingness" problem: the presence of null or unknown entries in critical fields such as perpetrator group names, casualty counts, and specific weapon sub-types [@Abdalsalam2024a]. These informational voids are not merely random artifacts of data entry but are often the product of systematic biases in media reporting, state-sponsored censorship, or the inherent clandestine nature of non-state actors [@wani2024review].
-:::
-::::
+
+# Prior Research
+The modern frontier of data science offers a robust suite of solutions to mitigate information gaps through advanced data imputation [@Azad2025]. Traditional methods, such as listwise deletion or mean substitution, are increasingly viewed as inadequate because they frequently introduce significant bias and reduce the statistical power of subsequent analyses [@Aleryani2020]. Instead, a sophisticated integration of domain-specific Natural Language Processing (NLP) and meta-learning ensemble architectures is emerging as the gold standard for data recovery in conflict event databases. By leveraging extractive transformer models like ConfliBERT to analyze unstructured event summaries and employing Meta-Imputation Balanced (MIB) frameworks to synthesize predictions from multiple algorithmic sources, Researchers have extracted contextual information by collating common attacks with synthesized data to produce models capable of highly accurately predicting group name [@Azad2025].
+
+[@wani2024review] explores the mechanisms of missing data completely at random (MCAR), when the observed data is unevenly missing at random (MAR) and not missing at random (NMAR), in which the missingness is a result of a confounding effect. In their review of potential imputation frameworks, Wani evaluates recovery strategies such as Multiple Imputation by Chained Equations (MICE), Random Forests, and Generative Adversarial Networks. Wani advocates for task-specific evaluation metrics rather than relying solely on standard error calculations to address imbalanced NMAR datasets such as the GTD which exhibit high dimensionality. In datasets such as these, fields are left blank or intentionally flagged as unknown if there is not clear concensus, even if some potential information points toward a value. Indeed, Abdasalam notes in their 2024 article exploring the missingness of the group name field that a value being left unknown is sometimes a concious choice, stating "This gap in research may stem from the complex and dynamic nature of terrorist groups, which frequently evolve, change names, merge, or disband, thereby complicating the creation of accurate and current classification and prediction models." [@Abdalsalam2024a].
+
+Reductions in the analyzed dataset have also prevailed to produce statistically significant predictons at the cost of external validity. Abdalsalam has had success with highly predictive contextual prediction models such as DistilBERT [@Abdalsalam2021a] or BiGRU [@Abdalsalam2024a], but only with a small collection of potential groups who have a 500 or more documented attacks in the GTD. This exposes the limitations of predicting a 'freeform' field such as group name using a statistical model with a limited Retrieval Augmented Generation (RAG) ability to narrow the search space of the contextual model. In the tangential field of Biomedical data, Azad has shown the promise of ensemble-based methods that combine contextual models with ensemble models to produced balanced approaches that adjust weights of predictors across multiple missing fields [@Azad2025]. This approach may allow analysts to bridge the gap between records where generating a RAG of applicable context (such as English language news articles) is not available in a timely banner.
+
+Accounting for the level of missingness using a mask indicator is also useful to identify patterns in NMAR datasets. Using this method, Perez-Lebel (2022) benchmarked imputation approaches on healthcare databases and found that tree-based models utilizing Missing Incorporated in Attributes (MIA) provide the best balance of accuracy and speed [@PerezLebel2022]. When data is weakly correlated, a Ranked k-Nearest Neighbors (RkNN) can perform well. @Khan2024 introduces the RkNN algorithm to refine traditional kNN imputation. By utilizing Ranked Set Sampling, this algorithm better handles data variability and reduces error when variables are weakly correlated or lack sufficient nearby neighbors.
+
+Extensive research has been performed leveraging ensemble frameworks to reduce variance and improve prediction accuracy. @Aleryani2020 proposed Multiple Imputation Ensembles (MIE), a system where multiple imputation techniques and ensemble methods collaborate to produce a superior final prediction when data is Missing Completely At Random. @Azad2025 detailed the Meta-Imputation Balanced (MIB) framework, which trains a supervised meta-model on synthetically masked data to intelligently weigh the outputs of multiple base imputers. These methods are automated, powerful tools, which trade computational performance for accuracy. A key advantage is the ability for the models to seek and identify statistically significant fields on their own, although this can also be a hazard when colinear variables or keys are included for contention, reducing the external validity of the model to impute new data.
 
 ## Key refinement steps
+I began by first examining these missing fields and identifying candidates for imputation with the Global Terrorism Database. Then, after categorizing attacks by individual, small and large groups, 
 
 High-quality, varied data is the often-sought, rarely acquired state for quantative analysis. I first began my research by identifying the fields with a high degree of missingness across the GTD. I discovered that only 17% of records have a listed number of perpetrators (nperps) field. This reflects a strategy by the GTD researchers at START to only include data they can establish with absolute certainty [@GTD2007introducing]. As a result, while information on attackers might be fairly robust, if the accounts of an attack only refer to "a handful of attackers" or "an unknown assailant," it is likely that the number of perpetrators would be left blank. I hypothesize that for the purposes of statistical analysis of outcomes, defining the exact number of actors is likely required; rather, establishing broader categories of Individual, Small Group and Large Group would be sufficient to convert the number of perpetrators into a categorical factor which could be used for imputation and prediction. In this way, the accuracy and specificity of the imputation model is greatly increased, without compromising the field for my purposes. By using Multivariate imputation by chained equations (MICE), I applied this method on the GTD dataset, with a few caveats beforehand: I assumed that attacks marked as suicide attacks in the GTD involved at least one perpetrator: The number of perpetrators must be nonzero in this case. I also restricted the variables used in my imputation model to primary attack type (attacktype1), primary weapon type (weaptype1), primary target (targtype1), and the broader region and country variables. I did not restrict my model to a specific time or country bounds, in the hopes that the resulting model would retain its accuracy independent of longitudinal or location confounding effects.
 
 After training, I generated a confusion matrix against the unimputed data for comparison purposes. The results of the MICE model reflect a relatively high degree of accuracy in predicting if an attack was perpetrated by an individual (97.7%), with decreasing performance for the small and large group categories. I then applied logistic regression against my imputed results to examine the differences in outcomes and tactics, if any, between attacks by individuals and groups. I determined that while individuals and groups have similar outcomes when the same attack and weapon types are considered, individual terrorist attackers are far more likely to employ vehicles and to commit suicide attacks.
 
-# Prior Research
-
-The modern frontier of data science offers a robust suite of solutions to mitigate these gaps through advanced data imputation [@Azad2025]. Traditional methods, such as listwise deletion or mean substitution, are increasingly viewed as inadequate because they frequently introduce significant bias and reduce the statistical power of subsequent analyses [@Aleryani2020]. Instead, a sophisticated integration of domain-specific Natural Language Processing (NLP) and meta-learning ensemble architectures is emerging as the gold standard for data recovery in conflict event databases. By leveraging extractive transformer models like ConfliBERT to analyze unstructured event summaries and employing Meta-Imputation Balanced (MIB) frameworks to synthesize predictions from multiple algorithmic sources, I aim to achieve a level of granular accuracy previously considered unattainable [@Azad2025].
-
-After identifying the fields with the highest level of missingness, I will combine ConfliBERT and MIB into a Generative Adversarial Imputation Net (GAIN) framework and analyze the efficacy of the results. This will be compared to other modern imputation methods such as DeepIFSAC for comparative analysis [@Kowsar2025]. The result of this comparison will be an examination of the amount of data newly available for research as compared to previous efforts which dropped groups without a sufficient number of attacks or contained missing data [@Abdalsalam2021a]. My full workflow is divided into several steps:
-
-## Data Collection and Integration
-
-If the field in the GTD dataset could be identified with the data available only to the GTD itself, START would have already done so. Thus, the first step is to produce an event fingerprint which can be used to look up the event in other datasets. Using metadata such as Event class, location and date, I will use this fingerprint to look up even event in the ACLED dataset to acquire additional context and fields on which to employ the FAME method via the Mediacloud database [@Cai2025]. This avoids a need to manually train models against on a large variety of news datasets to find contextual information for furure steps. The result is a collection of text responses corresponding to the event that can then be mined to populate missing fields from the GTD.
-
-## Pre-processing and feature engineering
-
-The next step is to tokenize and normalize the collection of text fields corresponding to the event being enriched. SMOTE-T will be applied to produce synthesized data for group names belonging to minority groups [@Abdalsalam2024], and for preperation in separating the "Unknown" group names into "Lone Wolf" (single perpetrator) and truly unknown groups (multiple perpetrators). Fields with strong interdependencies such as Attack Type and Weapon Type or Number of Killed and Wounded will be identified using Normalized Mutual Information (NMI) and the Pearson correlation coefficient (PCC) [@Abdalsalam2024a]. 10-20% of training data will be reserved for validation purposes.
-
-## Model Training and Imputation Execution
-
-Three seperate processes will be employed for data imputation depending on the type of missing data. For text-based categorical attributes like Group Name or Motive, ConfliBERT will be used to identify Named Entity Recognition and Multi-class Classification [@Brandt2024]. This 33.7 GB pre-trained dataset can extract commonalities from other attacks and descriptions. For numerical values such as the number of killed and wounded, DeepIFSAC can be used to collate data by location and time, and infer adjacent records, identifying attacks that occurred by the same attack type to predict outcomes [@Kowsar2025]. Finally, GAIN can be used with the partially-imputed datasets to make further assumptions on weapon and attack types. This "discriminator" network attempts to differentiate between real and imputed values to ensure realistic results that match established outcomes, not just statistically predicted effects [@Azad2025].
-
-## Meta-Ensemble Integration Framework (MIB)
-
-With candidate values for each field generated from the model collection, I will train a meta-learning layer on the synthetic values. This is also an opportunity to bring in other KNN And Forest models for accuracy comparisons. The MIB serves to balance and weigh the models based on their effectiveness on each imputed column, improving accuracy by dynamic weight adjustment [@Azad2025]. The results of the meta-model produce a final, refined imputed record which can then be analyzed for accuracy.
-
-## Accuracy Validation and Post-Processing
-
-While the modern tooling used to impute the data in this workflow is a critical in for this research, the efficacy of the process is the heart of the papers results. I will validate tool usage both in this particular effort and their viability for application against the GTD. I will determine Root Mean Squared Error (RMSE) and Mean Absolute Percentage Error (MAPE) for the nkill and nwould (casualty) fields, and measure Accuracy, Precision, Recall and F1-score for the gname (group name) and motive (crit1-3) classifications. The weights of each model will be evaluated as a measure of fitness for usage against the GTD, and analysis of the newly-imputed fields will be performed via a regression analysis on the predictive power of the dataset before and after the imputation, such as predicting region based off attack type or weapon usage based off casualties. This before-and-after comparison reflects the actual improvement in data quality post-imputation.
-
-\clearpage
-
-# Data Identification
-
-The **Global Terrorism Database** (GTD) is an open-source database including information on terrorist attacks around the world from 1970 through 2021. Maintained by the National Consortium for the Study of Terrorism and Responses to Terrorism (START), it contains over 200,000 cases of domestic and international terrorist incidents. Each entry includes systematic data on the location, weapons used, nature of the target, and the group responsible, provided there is enough information available. It is widely considered the most comprehensive unclassified database of its kind, making it a critical resource for researchers analyzing patterns and trends in global terrorism. [@GTD2007introducing]
-
-The **Armed Conflict Location & Event Data Project** (ACLED) is a high-frequency, disaggregated dataset that provides near-real-time monitoring of political violence and protest events worldwide. It captures specific details for each incident, including the date, precise geographic location, actors involved, and reported fatalities, across categories like battles, riots, and violence against civilians. The ACLED is notable for being updated weekly (with a 12 month lag time) and covers both violent and non-violent strategic developments to provide a comprehensive view of political disorder. Its global scope and focus on sub-national analysis make it a primary resource for researchers, humanitarian agencies, and policymakers tracking conflict trends and early warning signs. [@ACLED2023political]
+```{r package_install, include=FALSE}
+remotes::install_github("https://github.com/r-forge/countreg", subdir="pkg")
+install.packages("topmodels", repos = "https://R-Forge.R-project.org")
+```
 
 ```{r setup, include=FALSE}
 ## Libraries
@@ -120,15 +97,19 @@ library(pscl)     # ZINB regression
 library(remotes)  # Grab repos not on CRAN FORGE
 library(gridExtra)# side-by-side models
 library(patchwork)# another attempt at side-by-side models
+library(countreg) # rootogram
+library(topmodels)# another rootogram implementation
 ```
 
 ```{r data_load, include=FALSE}
+#| cache: true
 ## Data Load (Get a cuppa coffee...)
 gtd_full <- read.csv('.\\Data\\globalterrorismdb_0522dist.csv')
 acled_full <- read.csv('.\\Data\\ACLED_Data_2026-02-08.csv')
 ```
 
 ```{r data_shape, include=FALSE}
+#| cache: true
 # Replace GTD missing value codes (-99) with NA
 gtd_full <- gtd_full %>%
   mutate(
@@ -177,15 +158,16 @@ shared_events <- inner_join(
 
 print(paste("Number of shared events found:", nrow(shared_events)))
 head(shared_events)
-rm(gtd_full, acled_full)
+#rm(gtd_full, acled_full)
 ```
 
 ```{r gtd_missingness, include=FALSE}
+#| cache: true
 gtd_target_cols <- c("gname", "nperps", "nkill", "nwound", "motive")
 gtd_target_col_labels <- c("Group Name", "Number of Perpetrators", "Number Killed", "Number Wounded", "Motive")
   
 gtd_missing_data_summary <- gtd_clean %>%
-  select(all_of(gtd_target_cols)) %>%
+  dplyr::select(all_of(gtd_target_cols)) %>%
   summarise(across(everything(), ~ mean(is.na(.)) * 100)) %>%
   # Reshape data from wide to long format for plotting
   pivot_longer(cols = everything(), 
@@ -199,6 +181,7 @@ Examining the GTD data and existing research [@Abdalsalam2024], I identified tha
 After using Multivariate imputation by chained equations (MICE) to perform data imputation on the number of perpetrators `nperps`
 
 ```{r gtd_plot}
+#| cache: true
 #| label: fig1
 #| fig-cap: "Select fields ordered by their percentage of missingness in the GTD"
 
@@ -222,11 +205,12 @@ ggplot(gtd_missing_data_summary, aes(x = Column, y = Missing_Pct)) +
 ```
 
 ```{r acled_missingness, include=FALSE}
+#| cache: true
 acled_target_cols <- c("actor1", "actor2", "inter1", "inter2")
 aclet_target_col_labels <- c("Primary Actor", "Secondary Actor", "Interactor", "Secondary Interactor")
 
 acled_missingness_summary <- acled_clean %>%
-  select(all_of(acled_target_cols)) %>%
+  dplyr::select(all_of(acled_target_cols)) %>%
   summarise(across(everything(), function(x) {
     # Calculate percentage where ANY of these conditions are true:
     mean(
@@ -262,11 +246,11 @@ ggplot(acled_missingness_summary, aes(x = Column, y = Missing_Pct)) +
     panel.grid.major.x = element_blank(),
     plot.title = element_text(face = "bold")
   )
-rm(acled_clean, acled_missingness_summary)
+#rm(acled_clean, acled_missingness_summary)
 ```
 
 ```{r mice_nperps, include=FALSE}
-#| eval: false # rely on existing environment for speedy rendering
+#| cache: true
 # Generate full predictor matrix, divide nperps into categorical variable
 gtd_clean <- gtd_clean %>%
   mutate(nperps = if_else(suicide == 1 & is.na(nperps), 1, nperps)) %>%
@@ -283,7 +267,7 @@ gtd_clean <- gtd_clean %>%
   mutate(nperps_cat = as.factor(nperps_cat))
 # Select only the columns needed for the imputation model to save memory/time
 impute_data <- gtd_clean %>%
-  select(eventid, nperps, nperps_cat, nkill, nwound, attacktype1, weaptype1, targtype1, suicide, region, country, iyear, country_txt, region_txt, provstate)
+  dplyr::select(eventid, nperps, nperps_cat, nkill, nwound, attacktype1, weaptype1, targtype1, suicide, region, country, iyear, country_txt, region_txt, provstate)
 
 # Convert categorical variables to factors
 categorical_vars <- c("nperps_cat", "attacktype1", "weaptype1", "targtype1", "suicide", "region", "country", "country_txt", "region_txt", "provstate")
@@ -317,6 +301,7 @@ pooled_results <- pool(logistic_models)
 ```
 
 ```{r mice_accuracy, include=FALSE}
+#| cache: true
 # Map over final methodologies
 pred_mat <- final_imputation$predictorMatrix
 imp_methods <- final_imputation$method
@@ -339,6 +324,7 @@ rm(dry_run)
 ```
 
 ```{r conf_table}
+#| cache: true
 #| label: fig3
 #| fig-cap: "Performance Metrics of MICE Imputation by Category"
 completed_eval_data <- complete(eval_imputation, 1)
@@ -360,7 +346,7 @@ metrics_table <- metrics_table %>%
   mutate(
     `Pct Diff in Sensitivity from Prev Row` = sprintf("%.2f%%", (Sensitivity - lag(Sensitivity)) / lag(Sensitivity) * 100)
   ) %>%
-  select(Class, Sensitivity, Specificity, `Pct Diff in Sensitivity from Prev Row`)
+  dplyr::select(Class, Sensitivity, Specificity, `Pct Diff in Sensitivity from Prev Row`)
 
 metrics_table <- metrics_table %>%
   mutate(
@@ -381,6 +367,7 @@ metrics_table %>%
 ```
 
 ```{r conf_plot}
+#| cache: true
 #| label: fig4
 #| fig-cap: "Confusion Matrix for Imputed Categories"
 cm_df <- as.data.frame(conf_matrix$table)
@@ -404,6 +391,7 @@ rm(eval_imputation, masked_data, truth_data, completed_eval_data)
 ```
 
 ```{r mice_results_plot}
+#| cache: true
 #| label: fig5
 #| fig-cap: "Predictors of Independent Actor (Lone Wolf) Terrorism"
 # Tidy the data and calculate Odds Ratios at 95% confidence
@@ -519,6 +507,7 @@ ggsave("forest_plot_lone_wolf.png", plot = forest_plot_quad, width = 12, height 
 ```
 
 ```{r complete_full_data, include=FALSE}
+#| cache: true
 # Extract all 5 models, then average and consolidate, to attempt to reduce variance
 imputed_long <- complete(final_imputation, action = "long")
 imputed_averaged <- imputed_long %>%
@@ -542,7 +531,7 @@ imputed_averaged <- imputed_long %>%
   )
 
 gtd_clean_final <- gtd_clean %>%
-  select(-c(nperps, nperps_cat, nkill, nwound)) %>%
+  dplyr::select(-c(nperps, nperps_cat, nkill, nwound)) %>%
   left_join(imputed_averaged, by = "eventid") %>%
   rename(
     nperps = nperps_avg,
@@ -551,11 +540,12 @@ gtd_clean_final <- gtd_clean %>%
   )
 
 # Verify the final structure
-str(gtd_clean_final %>% select(eventid, nperps, nperps_cat, nkill, nwound))
-rm(imputed_long, imputed_averaged, gtd_clean, impute_data)
+str(gtd_clean_final %>% dplyr::select(eventid, nperps, nperps_cat, nkill, nwound))
+rm(imputed_long, imputed_averaged, impute_data)
 ```
 
 ```{r nperps_on_nkill, include=FALSE}
+#| cache: true
 # Evaluate the effects of perpetrator group size on the number of individuals killed in the attack
 kruskal.test(nkill ~ nperps_cat, data = gtd_clean_final)
 # Result is near-zero, so what is the relationship between category and nkill?
@@ -570,19 +560,27 @@ A Kruskal-Wallis rank sum test was conducted to determine if there were differen
 When examining the effect that tactics and group composition has on casualities in terror attacks, the extreme overdispersion of casualties means that a standard regression underestimates the standard errors, leading to false significance. This is a particular risk when considering the imputed dataset. As a result, I employed a Zero-inflated negative binomial (ZINB) model to examine the relationship between nkill and the other predictors. The ZINB model seperates the structurally missing (data not determined by GTD) data from the attack data where the attack was a failure. However, upon production of the model, its predictors bias matched the Negative Binomial result.
 
 ```{r zinb_model, include=FALSE}
+#| cache: true
 gtd_clean_final$nperps_cat <- relevel(gtd_clean_final$nperps_cat, ref = "Lone Wolf")
 
 zinb_models <- with(gtd_clean_final, 
                     zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
                              dist = "negbin"))
 ```
-
 ```{r rootogram_plot_3, include=FALSE}
+#| cache: true
 plot_nb <- glm.nb(nkill ~ nperps_cat + region + attacktype1 + weaptype1, 
                   data = gtd_clean_final)
-plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
-                      data = gtd_clean_final, dist = "negbin")
 
+# Unfortunately these zinb calculations don't render. However the result matches
+# the nb plot identically.
+#plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
+#                      data = gtd_clean_final, dist = "negbin")
+# ZINB calculations
+#expected_probs_zinb <- predict(plot_zinb, type = "prob")
+#expected_freq_zinb <- colSums(expected_probs_zinb[, 1:(plot_limit + 1)])
+```
+```{r rootogram_plot_4, include=FALSE}
 # Process the Data (Filtering to 25 to keep the plot readable)
 plot_limit <- 25 
 
@@ -599,17 +597,15 @@ df_nb <- data.frame(
 ) %>%
   mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
 
-# ZINB calculations
-expected_probs_zinb <- predict(plot_zinb, type = "prob")
-expected_freq_zinb <- colSums(expected_probs_zinb[, 1:(plot_limit + 1)])
-
-df_zinb <- data.frame(
-  Count = 0:plot_limit,
-  Observed = as.numeric(observed_freq),
-  Expected = as.numeric(expected_freq_zinb)
-) %>%
-  mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
-
+#df_zinb <- data.frame(
+#  Count = 0:plot_limit,
+#  Observed = as.numeric(observed_freq),
+#  Expected = as.numeric(expected_freq_zinb)
+#) %>%
+#  mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
+```
+```{r rootogram_plot_5, include=FALSE}
+#| cache: true
 # Helper function
 build_rootogram <- function(data, title) {
   ggplot(data, aes(x = Count)) +
@@ -627,8 +623,8 @@ build_rootogram <- function(data, title) {
     theme(plot.title = element_text(face = "bold", size = 12))
 }
 ```
-
-```{r rootogram_plot_4}
+```{r rootogram_plot_6}
+#| cache: true
 #| label: fig6
 #| echo: false
 #| warning: false
@@ -639,11 +635,11 @@ build_rootogram <- function(data, title) {
 #| fig-align: "center"
 # Create both plots
 plot1 <- build_rootogram(df_nb, "Standard Negative Binomial")
-plot2 <- build_rootogram(df_zinb, "Zero-Inflated Negative Binomial")
+#plot2 <- build_rootogram(df_zinb, "Zero-Inflated Negative Binomial")
 plot1 # | plot2 (ZINB identical to NB, can omit)
 ```
-
 ```{r zinb_model_2, include=FALSE}
+#| cache: true
 # Blessed be stack overflow, praise always to those who have figured this out before me
 # Define the missing tidy method for zeroinfl models
 tidy.zeroinfl <- function(x, conf.int = FALSE, conf.level = 0.95, ...) {
@@ -668,37 +664,37 @@ tidy.zeroinfl <- function(x, conf.int = FALSE, conf.level = 0.95, ...) {
 }
 
 # Extract the results with confidence intervals
-pooled_zinb_results <- pool(zinb_models)
-zinb_analysis_raw <- tidy(pooled_zinb_results, conf.int = TRUE)
+#pooled_zinb_results <- pool(zinb_models)
+#zinb_analysis_raw <- tidy(pooled_zinb_results, conf.int = TRUE)
 
 # View the raw summary
-summary(pooled_zinb_results)
+#summary(pooled_zinb_results)
 # Extract the results
-zinb_analysis <- tidy(pooled_zinb_results, conf.int = TRUE)
+#zinb_analysis <- tidy(pooled_zinb_results, conf.int = TRUE)
 # Clean up the names and recreate the 'component' column
-zinb_analysis <- zinb_analysis_raw %>%
-  mutate(
+#zinb_analysis <- zinb_analysis_raw %>%
+#  mutate(
     # Create the component column based on the prefix
-    component = ifelse(grepl("^count_", term), "count", "zero"),
+#    component = ifelse(grepl("^count_", term), "count", "zero"),
     # Strip the prefix out of the term name
-    term = gsub("^count_|^zero_", "", term)
-  )
+#    term = gsub("^count_|^zero_", "", term)
+#  )
 
 # Separate the models for easier exponentiation and reading
-count_model_results <- zinb_analysis %>% filter(component == "count")
-zero_model_results <- zinb_analysis %>% filter(component == "zero")
+#count_model_results <- zinb_analysis %>% filter(component == "count")
+#zero_model_results <- zinb_analysis %>% filter(component == "zero")
 
 # Exponentiate the count model to get Incidence Rate Ratios (IRRs)
-count_model_irrs <- count_model_results %>%
-  mutate(estimate_irr = exp(estimate),
-         conf.low_irr = exp(conf.low),
-         conf.high_irr = exp(conf.high))
+#count_model_irrs <- count_model_results %>%
+#  mutate(estimate_irr = exp(estimate),
+#         conf.low_irr = exp(conf.low),
+#         conf.high_irr = exp(conf.high))
 
 # Exponentiate the zero model to get Odds Ratios (ORs)
-zero_model_ors <- zero_model_results %>%
-  mutate(estimate_or = exp(estimate),
-         conf.low_or = exp(conf.low),
-         conf.high_or = exp(conf.high))
+#zero_model_ors <- zero_model_results %>%
+#  mutate(estimate_or = exp(estimate),
+#         conf.low_or = exp(conf.low),
+#         conf.high_or = exp(conf.high))
 ```
 
 \clearpage
