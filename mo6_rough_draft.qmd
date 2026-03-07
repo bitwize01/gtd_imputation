@@ -158,7 +158,7 @@ gtd_missing_data_summary <- gtd_clean %>%
 ```{r acled_missingness, include=FALSE}
 #| cache: true
 acled_target_cols <- c("actor1", "actor2", "inter1", "inter2")
-aclet_target_col_labels <- c("Primary Actor", "Secondary Actor", "Interactor", "Secondary Interactor")
+acled_target_col_labels <- c("Primary Actor", "Secondary Actor", "Interactor", "Secondary Interactor")
 
 acled_missingness_summary <- acled_clean %>%
   dplyr::select(all_of(acled_target_cols)) %>%
@@ -384,12 +384,12 @@ In an opportunity to provide additional context to the GTD, other adjacent datas
 #| label: fig3
 #| fig-cap: "Select fields ordered by their percentage of missingness in the ACLED"
 
-ggplot(acled_missingness_summary, aes(x = Column, y = Missing_Pct)) +
+ggplot(acled_missingness_summary, aes(x = Missing_Pct, y = reorder(acled_target_col_labels, Column))) +
   geom_col(fill = "steelblue", alpha = 0.8) +
   geom_text(aes(label = sprintf("%.1f%%", Missing_Pct)), 
             vjust = -0.5, size = 3.5) +
-  scale_y_continuous(limits = c(0, 100), expand = expansion(mult = c(0, 0.1))) +
-  scale_x_discrete(labels = aclet_target_col_labels) +
+  scale_x_continuous(limits = c(0, 100), expand = expansion(mult = c(0, 0.1))) +
+  scale_y_discrete(labels = acled_target_col_labels) +
   labs(
     title = "ACLED: Percentage of Missing Data by Column",
     subtitle = "Includes NA values and 'Unknown' strings",
