@@ -256,13 +256,13 @@ mice_cat_results <- mice(impute_data_cat,
 
 ```{r nperps_log_models, include=FALSE}
 #| cache: true
-logistic_models_nperps_cat <- with(final_imputation, 
+logistic_models_nperps_cat <- with(mice_cat_results, 
                         glm(nperps_cat == "Lone Wolf" ~ attacktype1 + weaptype1 + targtype1 + suicide + region, 
                             family = binomial))
 
 pooled_results_nperps_cat <- pool(logistic_models_nperps_cat)
 
-logistic_models_nperps <- with(final_imputation, 
+logistic_models_nperps <- with(mice_cont_results, 
                         glm(nperps == 1 ~ attacktype1 + weaptype1 + targtype1 + suicide + region, 
                             family = binomial))
 
