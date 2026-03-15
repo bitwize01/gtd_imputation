@@ -93,9 +93,9 @@ gtd_full <- gtd_full %>%
     gname = ifelse(gname == -99 | gname == "Unknown", NA, gname),
     gname2 = ifelse(gname2 == -99 | gname2 == "Unknown", NA, gname2),
     gname3 = ifelse(gname3 == -99 | gname3 == "Unknown", NA, gname3),
-    attacktype1 = ifelse(attacktype1 == -99 | attacktype1 == "Unknown", NA, attacktype1),
-    weaptype1 = ifelse(weaptype1 == -99 | weaptype1 == "Unknown", NA, weaptype1),
-    targtype1 = ifelse(targtype1 == -99 | targtype1 == "Unknown", NA, targtype1),
+    attacktype1 = ifelse(attacktype1 %in% c(-99, 9), NA, attacktype1), # Codebook says 9 is Unknown
+    weaptype1 = ifelse(weaptype1 %in% c(-99, 13), NA, weaptype1), # Codebook says 13 is Unknown
+    targtype1 = ifelse(targtype1 %in% c(-99, 20), NA, targtype1), # Codebook says 20 is Unknown
     suicide = ifelse(suicide == -99 | suicide == "Unknown", NA, suicide),
     region = ifelse(region == -99 | region == "Unknown" | region == "", NA, region),
     motive = ifelse(motive == -99 | motive == "motive" | motive == "", NA, motive)
@@ -177,6 +177,7 @@ acled_missingness_summary <- acled_clean %>%
 ```{r mice_nperps, include=FALSE}
 #| cache: true
 # Generate full predictor matrix, divide nperps into categorical variable
+# Although we don't want to impute on this to avoid colinearity with nperps
 gtd_clean <- gtd_clean %>%
   mutate(nperps = if_else(suicide == 1 & is.na(nperps), 1, nperps)) %>%
   mutate(
@@ -194,26 +195,25 @@ gtd_clean <- gtd_clean %>%
 impute_data <- gtd_clean %>%
   dplyr::select(eventid, nperps, nperps_cat, nkill, nwound, attacktype1, weaptype1, targtype1, suicide, region, country, iyear, country_txt, region_txt, provstate)
 
-# Convert categorical variables to factors
-categorical_vars <- c("nperps_cat", "attacktype1", "weaptype1", "targtype1", "suicide", "region", "country", "country_txt", "region_txt", "provstate")
+# Convert remaining categorical variables
+categorical_vars <- c("attacktype1", "weaptype1", "targtype1", "suicide", "region", "country", "country_txt", "region_txt", "provstate")
 impute_data[categorical_vars] <- lapply(impute_data[categorical_vars], factor)
 
 dry_run <- mice(impute_data, maxit = 0, printFlag = FALSE)
 pred_mat <- dry_run$predictorMatrix
 imp_methods <- dry_run$method
-imp_methods["nperps"] <- "pmm" # Use whole numbers and avoid skew
+# Impute numbers with pmm, categories with rf
+imp_methods[c("nperps", "nkill", "nwound")] <- "pmm" 
 imp_methods[imp_methods != ""] <- "rf"
-# If the attack was a suicide attack, we can reasonably assume the attackers is
-# at least 1
-imp_methods["nperps"] <- "~I(ifelse(suicide == 1 & is.na(nperps), 1, nperps))"
-vars_to_exclude <- c("eventid", "country_txt", "region_txt", "provstate")
+# Country has too many factors to rf upon
+vars_to_exclude <- c("eventid", "nperps_cat", "country", "country_txt", "region_txt", "provstate")
 pred_mat[, vars_to_exclude] <- 0
 pred_mat[vars_to_exclude, ] <- 0
 
 # MICE with varied methods by variable
 final_imputation <- mice(impute_data, 
-                         m = 5, 
-                         maxit = 10, 
+                         m = 1, # Full run: 5
+                         maxit = 1, # Full run: 10
                          method = imp_methods, 
                          predictorMatrix = pred_mat, 
                          seed = 101)
@@ -446,11 +446,11 @@ pred_mat <- final_imputation$predictorMatrix
 imp_methods <- final_imputation$method
 
 # Confusion matrix of MICE process against nperps_cat
-truth_data <- impute_data %>% filter(!is.na(nperps_cat))
+truth_data <- impute_data %>% filter(!is.na(nperps))
 set.seed(101)
 masked_data <- truth_data
 mask_indices <- sample(1:nrow(masked_data), size = floor(0.3 * nrow(masked_data)))
-true_categories <- masked_data$nperps_cat[mask_indices]
+true_categories <- masked_data$nperps[mask_indices]
 masked_data$nperps_cat[mask_indices] <- NA
 
 eval_imputation <- mice(masked_data, 
@@ -644,7 +644,6 @@ forest_plot_quad <- ggplot(plot_data, aes(x = estimate, y = reorder(clean_term, 
   )
 
 forest_plot_quad
-#ggsave("forest_plot_lone_wolf.png", plot = forest_plot_quad, width = 12, height = 10, dpi = 300)
 ```
 
 ```{r complete_full_data, include=FALSE}
@@ -652,6 +651,10 @@ forest_plot_quad
 # Extract all 5 models, then average and consolidate, to attempt to reduce variance
 imputed_long <- complete(final_imputation, action = "long")
 imputed_averaged <- imputed_long %>%
+  mutate(
+    # Enforce the logic: If it's a suicide attack and MICE somehow guessed < 1, bump it to 1
+    nperps = ifelse(suicide == 1 & nperps < 1, 1, nperps)
+  ) %>%
   group_by(eventid) %>%
   summarise(
     # Calculate the mean and round to the nearest whole number
@@ -660,7 +663,7 @@ imputed_averaged <- imputed_long %>%
     nwound_avg = round(mean(nwound))
   ) %>%
   ungroup() %>%
-  # Rebuild nperps_cat
+  # build nperps_cat
   mutate(
     nperps_cat = case_when(
       nperps_avg == 1 ~ "Lone Wolf",
