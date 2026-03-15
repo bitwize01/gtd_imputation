@@ -217,17 +217,26 @@ final_imputation <- mice(impute_data,
                          method = imp_methods, 
                          predictorMatrix = pred_mat, 
                          seed = 101)
+```
 
-logistic_models <- with(final_imputation, 
+```{r nperps_log_models, include=FALSE}
+#| cache: true
+logistic_models_nperps_cat <- with(final_imputation, 
                         glm(nperps_cat == "Lone Wolf" ~ attacktype1 + weaptype1 + targtype1 + suicide + region, 
                             family = binomial))
 
-pooled_results <- pool(logistic_models)
+pooled_results_nperps_cat <- pool(logistic_models_nperps_cat)
+
+logistic_models_nperps <- with(final_imputation, 
+                        glm(nperps == 1 ~ attacktype1 + weaptype1 + targtype1 + suicide + region, 
+                            family = binomial))
+
+pooled_results_nperps <- pool(logistic_models_nperps)
 ```
 
 ```{r introduction_stats, include=FALSE}
+#| cache: true
 attacks_over_time <- gtd_clean %>%
-  #| cache: true
   filter(iyear >= 2000 & nperps >= 1) %>%
   filter(region_txt %in% c('Eastern Europe', 'Western Europe', 'North America')) %>%
   mutate(casualties = nkill + nwound) %>%
