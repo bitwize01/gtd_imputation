@@ -191,31 +191,66 @@ gtd_clean <- gtd_clean %>%
   ) %>%
   # MICE requires categorical targets to be explicitly defined as factors
   mutate(nperps_cat = as.factor(nperps_cat))
-# Select only the columns needed for the imputation model to save memory/time
+
+# Base fields needed for both MICE runs
+base_vars <- c("eventid", "nkill", "nwound", "attacktype1", "weaptype1", 
+               "targtype1", "suicide", "region", "country", "iyear", 
+               "country_txt", "region_txt", "provstate")
+
+# Categorical variables to factorize
+factor_vars <- c("attacktype1", "weaptype1", "targtype1", "suicide", 
+                 "region", "country", "country_txt", "region_txt", "provstate")
 impute_data <- gtd_clean %>%
   dplyr::select(eventid, nperps, nperps_cat, nkill, nwound, attacktype1, weaptype1, targtype1, suicide, region, country, iyear, country_txt, region_txt, provstate)
 
-# Convert remaining categorical variables
-categorical_vars <- c("attacktype1", "weaptype1", "targtype1", "suicide", "region", "country", "country_txt", "region_txt", "provstate")
-impute_data[categorical_vars] <- lapply(impute_data[categorical_vars], factor)
+# Prep for run "A" - continuous nperps test
+impute_data_cont <- gtd_clean %>% 
+  dplyr::select(all_of(base_vars), nperps) %>%
+  mutate(across(all_of(factor_vars), as.factor))
 
-dry_run <- mice(impute_data, maxit = 0, printFlag = FALSE)
-pred_mat <- dry_run$predictorMatrix
-imp_methods <- dry_run$method
-# Impute numbers with pmm, categories with rf
-imp_methods[c("nperps", "nkill", "nwound")] <- "pmm" 
-imp_methods[imp_methods != ""] <- "rf"
-# Country has too many factors to rf upon
-vars_to_exclude <- c("eventid", "nperps_cat", "country", "country_txt", "region_txt", "provstate")
-pred_mat[, vars_to_exclude] <- 0
-pred_mat[vars_to_exclude, ] <- 0
+dry_run_cont <- mice(impute_data_cont, maxit = 0, printFlag = FALSE)
+pred_mat_cont <- dry_run_cont$predictorMatrix
+imp_meth_cont <- dry_run_cont$method
 
-# MICE with varied methods by variable
-final_imputation <- mice(impute_data, 
-                         m = 1, # Full run: 5
-                         maxit = 1, # Full run: 10
-                         method = imp_methods, 
-                         predictorMatrix = pred_mat, 
+imp_meth_cont[c("nperps", "nkill", "nwound")] <- "pmm"
+imp_meth_cont[imp_meth_cont != ""] <- "rf"
+
+# Exclude high-factor variables from predicting to prevent RF crashes
+vars_to_exclude <- c("eventid", "country", "country_txt", "region_txt", "provstate")
+pred_mat_cont[, vars_to_exclude] <- 0
+pred_mat_cont[vars_to_exclude, ] <- 0
+
+# Run Model A: MICE against nperps
+mice_cont_results <- mice(impute_data_cont, 
+                          m = 1, # Full run: 5
+                          maxit = 1, # Full run: 10
+                          method = imp_meth_cont, 
+                          predictorMatrix = pred_mat_cont, 
+                          seed = 101)
+```
+
+```{r nperps_cat_mice, include=FALSE}
+#| cache: true
+impute_data_cat <- gtd_clean %>% 
+  dplyr::select(all_of(base_vars), nperps_cat) %>%
+  mutate(across(all_of(factor_vars), as.factor))
+
+dry_run_cat <- mice(impute_data_cat, maxit = 0, printFlag = FALSE)
+pred_mat_cat <- dry_run_cat$predictorMatrix
+imp_meth_cat <- dry_run_cat$method
+
+imp_meth_cat[c("nkill", "nwound")] <- "pmm"
+imp_meth_cat[imp_meth_cat != ""] <- "rf" # Uses Random Forest to predict the categories
+
+pred_mat_cat[, vars_to_exclude] <- 0
+pred_mat_cat[vars_to_exclude, ] <- 0
+
+# Run Model B: nperps_cat as factorized binned categorical variable
+mice_cat_results <- mice(impute_data_cat, 
+                         m = 1, 
+                         maxit = 1, 
+                         method = imp_meth_cat, 
+                         predictorMatrix = pred_mat_cat, 
                          seed = 101)
 ```
 
