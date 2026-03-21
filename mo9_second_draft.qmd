@@ -222,8 +222,8 @@ pred_mat_cont[vars_to_exclude, ] <- 0
 
 # Run Model A: MICE against nperps
 mice_cont_results <- mice(impute_data_cont, 
-                          m = 1, # Full run: 5
-                          maxit = 1, # Full run: 10
+                          m = 5, # Full run: 5
+                          maxit = 10, # Full run: 10
                           method = imp_meth_cont, 
                           predictorMatrix = pred_mat_cont, 
                           seed = 101)
@@ -247,8 +247,8 @@ pred_mat_cat[vars_to_exclude, ] <- 0
 
 # Run Model B: nperps_cat as factorized binned categorical variable
 mice_cat_results <- mice(impute_data_cat, 
-                         m = 1, 
-                         maxit = 1, 
+                         m = 5, 
+                         maxit = 10, 
                          method = imp_meth_cat, 
                          predictorMatrix = pred_mat_cat, 
                          seed = 101)
@@ -476,67 +476,102 @@ After training, I generated a confusion matrix against the unimputed data for co
 
 ```{r mice_accuracy, include=FALSE}
 #| cache: true
-# Map over final methodologies
-pred_mat <- final_imputation$predictorMatrix
-imp_methods <- final_imputation$method
 
-# Confusion matrix of MICE process against nperps_cat
-truth_data <- impute_data %>% filter(!is.na(nperps))
+# Use gtd_clean because we need both the original continuous nperps and categorical nperps_cat
+truth_data <- gtd_clean %>% filter(!is.na(nperps))
 set.seed(101)
-masked_data <- truth_data
-mask_indices <- sample(1:nrow(masked_data), size = floor(0.3 * nrow(masked_data)))
-true_categories <- masked_data$nperps[mask_indices]
-masked_data$nperps_cat[mask_indices] <- NA
+mask_indices <- sample(1:nrow(truth_data), size = floor(0.3 * nrow(truth_data)))
+true_categories <- factor(truth_data$nperps_cat[mask_indices], 
+                          levels = c("Lone Wolf", "Small Cell", "Large Group"))
 
-eval_imputation <- mice(masked_data, 
-                        m = 1, # 1 dataset is sufficient for the evaluation run
-                        maxit = 5, 
-                        method = imp_methods, 
-                        predictorMatrix = pred_mat, 
-                        seed = 123)
-rm(dry_run)
+# -------------------------------------------------------------------
+# MODEL A: CONTINUOUS IMPUTATION TEST
+# -------------------------------------------------------------------
+masked_data_cont <- truth_data %>%
+  dplyr::select(all_of(base_vars), nperps) %>%
+  mutate(across(all_of(factor_vars), as.factor))
+
+# Mask the continuous variable
+masked_data_cont$nperps[mask_indices] <- NA
+
+# Run the evaluation imputation
+eval_imp_cont <- mice(masked_data_cont, 
+                      m = 1, maxit = 5, 
+                      method = imp_meth_cont, 
+                      predictorMatrix = pred_mat_cont, 
+                      seed = 101)
+
+# Extract and bin the numeric results back into categories for comparison
+completed_cont <- complete(eval_imp_cont, 1)
+imputed_nums <- completed_cont$nperps[mask_indices]
+
+# Apply your logical binning rules to the MICE continuous predictions
+imputed_cat_from_cont <- case_when(
+  imputed_nums == 1 ~ "Lone Wolf",
+  imputed_nums > 1 & imputed_nums <= 5 ~ "Small Cell",
+  imputed_nums > 5 ~ "Large Group",
+  TRUE ~ NA_character_
+)
+imputed_cat_from_cont <- factor(imputed_cat_from_cont, 
+                                levels = c("Lone Wolf", "Small Cell", "Large Group"))
+
+# -------------------------------------------------------------------
+# MODEL B: CATEGORICAL IMPUTATION TEST
+# -------------------------------------------------------------------
+masked_data_cat <- truth_data %>%
+  dplyr::select(all_of(base_vars), nperps_cat) %>%
+  mutate(across(all_of(factor_vars), as.factor))
+
+# Mask the categorical variable
+masked_data_cat$nperps_cat[mask_indices] <- NA
+
+# Run the evaluation imputation
+eval_imp_cat <- mice(masked_data_cat, 
+                     m = 1, maxit = 5, 
+                     method = imp_meth_cat, 
+                     predictorMatrix = pred_mat_cat, 
+                     seed = 101)
+
+# Extract the categorical results directly
+completed_cat <- complete(eval_imp_cat, 1)
+imputed_cat_from_cat <- factor(completed_cat$nperps_cat[mask_indices], 
+                               levels = c("Lone Wolf", "Small Cell", "Large Group"))
 ```
 
 ```{r conf_table}
 #| cache: true
 #| label: fig4
 #| fig-cap: "Performance Metrics of MICE Imputation by Category"
-completed_eval_data <- complete(eval_imputation, 1)
-imputed_categories <- completed_eval_data$nperps_cat[mask_indices]
+# Generate both Confusion Matrices
+conf_matrix_cont <- confusionMatrix(data = imputed_cat_from_cont, reference = true_categories)
+conf_matrix_cat <- confusionMatrix(data = imputed_cat_from_cat, reference = true_categories)
 
-# Generate the Confusion Matrix
-# It is critical to ensure both vectors have the exact same factor levels
-imputed_categories <- factor(imputed_categories, levels = c("Lone Wolf", "Small Cell", "Large Group"))
-true_categories <- factor(true_categories, levels = c("Lone Wolf", "Small Cell", "Large Group"))
-conf_matrix <- confusionMatrix(data = imputed_categories, reference = true_categories)
+# Extract metrics for Model A (Continuous)
+metrics_cont <- as.data.frame(conf_matrix_cont$byClass[, c("Sensitivity", "Specificity")])
+metrics_cont$Class <- gsub("Class: ", "", rownames(metrics_cont))
+metrics_cont$Model <- "Model A (Continuous)"
 
-# Extract Metrics and Format Summary Table
-# Extracting Sensitivity and Specificity, and calculating the percentage difference 
-# from the previous row based on Sensitivity.
-metrics_table <- as.data.frame(conf_matrix$byClass[, c("Sensitivity", "Specificity")])
-metrics_table$Class <- gsub("Class: ", "", rownames(metrics_table))
-metrics_table <- metrics_table %>%
-  mutate(
-    `Pct Diff in Sensitivity from Prev Row` = sprintf("%.2f%%", (Sensitivity - lag(Sensitivity)) / lag(Sensitivity) * 100)
-  ) %>%
-  dplyr::select(Class, Sensitivity, Specificity, `Pct Diff in Sensitivity from Prev Row`)
+# Extract metrics for Model B (Categorical)
+metrics_cat <- as.data.frame(conf_matrix_cat$byClass[, c("Sensitivity", "Specificity")])
+metrics_cat$Class <- gsub("Class: ", "", rownames(metrics_cat))
+metrics_cat$Model <- "Model B (Categorical)"
 
-metrics_table <- metrics_table %>%
-  mutate(
-    `Pct Diff in Sensitivity from Prev Row` = replace_na(`Pct Diff in Sensitivity from Prev Row`, "-")
-  )
-    
+# Combine and shape the table
+metrics_table <- bind_rows(metrics_cont, metrics_cat) %>%
+  dplyr::select(Model, Class, Sensitivity, Specificity) %>%
+  arrange(Class, Model)
+
 # Generate the table
 metrics_table %>%
   kbl(
-    caption = "Performance Metrics of MICE Imputation by Category",
-    booktabs = TRUE, # Essential for the clean, academic look (LaTeX/PDF)
+    caption = "Performance Metrics: Predicting from Continuous Data vs Binned Categories",
+    booktabs = TRUE,
     digits = 3,
-    align = c("l", "c", "c", "c", "C")
+    align = c("l", "l", "c", "c")
   ) %>%
   kable_classic(full_width = FALSE, html_font = "Cambria") %>%
-  add_header_above(c(" " = 1, "Performance Metrics" = 4)) %>%
-  footnote(general = "Pct Diff compares the sensitivity of the current row to the row above it.")
+  # Merges rows so "Lone Wolf" only prints once, with both models underneath it
+  collapse_rows(columns = 2, valign = "middle")
 ```
 
 ```{r conf_plot, include=FALSE}
