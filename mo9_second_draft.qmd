@@ -190,7 +190,7 @@ gtd_clean <- gtd_clean %>%
     )
   ) %>%
   # MICE requires categorical targets to be explicitly defined as factors
-  mutate(nperps_cat = as.factor(nperps_cat))
+  mutate(nperps_cat = ordered(nperps_cat, levels = c("Lone Wolf", "Small Cell", "Large Group")))
 
 # Base fields needed for both MICE runs
 base_vars <- c("eventid", "nkill", "nwound", "attacktype1", "weaptype1", 
@@ -213,10 +213,11 @@ pred_mat_cont <- dry_run_cont$predictorMatrix
 imp_meth_cont <- dry_run_cont$method
 
 imp_meth_cont[c("nperps", "nkill", "nwound")] <- "pmm"
+imp_meth_cont[c("country, provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
 imp_meth_cont[imp_meth_cont != ""] <- "rf"
 
 # Exclude high-factor variables from predicting to prevent RF crashes
-vars_to_exclude <- c("eventid", "country", "country_txt", "region_txt", "provstate")
+vars_to_exclude <- c("eventid", "country_txt", "region_txt")
 pred_mat_cont[, vars_to_exclude] <- 0
 pred_mat_cont[vars_to_exclude, ] <- 0
 
@@ -240,7 +241,9 @@ pred_mat_cat <- dry_run_cat$predictorMatrix
 imp_meth_cat <- dry_run_cat$method
 
 imp_meth_cat[c("nkill", "nwound")] <- "pmm"
-imp_meth_cat[imp_meth_cat != ""] <- "rf" # Uses Random Forest to predict the categories
+imp_meth_cat[c("nperps_cat")] <- "polr" # Proportional Odds Logistic Regression for the ordered factor
+imp_meth_cat[c("country, provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
+imp_meth_cat[imp_meth_cat != ""] <- "rf" # Random forest for everything else
 
 pred_mat_cat[, vars_to_exclude] <- 0
 pred_mat_cat[vars_to_exclude, ] <- 0
@@ -512,8 +515,8 @@ imputed_cat_from_cont <- case_when(
   imputed_nums > 5 ~ "Large Group",
   TRUE ~ NA_character_
 )
-imputed_cat_from_cont <- factor(imputed_cat_from_cont, 
-                                levels = c("Lone Wolf", "Small Cell", "Large Group"))
+imputed_cat_from_cont <- ordered(imputed_cat_from_cont, 
+                                 levels = c("Lone Wolf", "Small Cell", "Large Group"))
 
 # -------------------------------------------------------------------
 # MODEL B: CATEGORICAL IMPUTATION TEST
