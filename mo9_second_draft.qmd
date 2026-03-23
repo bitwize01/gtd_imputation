@@ -213,7 +213,7 @@ pred_mat_cont <- dry_run_cont$predictorMatrix
 imp_meth_cont <- dry_run_cont$method
 
 imp_meth_cont[c("nperps", "nkill", "nwound")] <- "pmm"
-imp_meth_cont[c("country, provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
+imp_meth_cont[c("country", "provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
 imp_meth_cont[imp_meth_cont != ""] <- "rf"
 
 # Exclude high-factor variables from predicting to prevent RF crashes
@@ -242,7 +242,7 @@ imp_meth_cat <- dry_run_cat$method
 
 imp_meth_cat[c("nkill", "nwound")] <- "pmm"
 imp_meth_cat[c("nperps_cat")] <- "polr" # Proportional Odds Logistic Regression for the ordered factor
-imp_meth_cat[c("country, provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
+imp_meth_cat[c("country", "provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
 imp_meth_cat[imp_meth_cat != ""] <- "rf" # Random forest for everything else
 
 pred_mat_cat[, vars_to_exclude] <- 0
@@ -598,7 +598,6 @@ ggplot(cm_df, aes(x = Reference, y = Prediction, fill = Freq)) +
     axis.text = element_text(size = 11),
     axis.title = element_text(size = 12, face = "bold")
   )
-rm(eval_imputation, masked_data, truth_data, completed_eval_data)
 ```
 
 ```{r mice_results_plot}
