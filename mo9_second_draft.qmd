@@ -212,9 +212,9 @@ dry_run_cont <- mice(impute_data_cont, maxit = 0, printFlag = FALSE)
 pred_mat_cont <- dry_run_cont$predictorMatrix
 imp_meth_cont <- dry_run_cont$method
 
+imp_meth_cont[imp_meth_cont != ""] <- "rf"
 imp_meth_cont[c("nperps", "nkill", "nwound")] <- "pmm"
 imp_meth_cont[c("country", "provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
-imp_meth_cont[imp_meth_cont != ""] <- "rf"
 
 # Exclude high-factor variables from predicting to prevent RF crashes
 vars_to_exclude <- c("eventid", "country_txt", "region_txt")
@@ -240,10 +240,10 @@ dry_run_cat <- mice(impute_data_cat, maxit = 0, printFlag = FALSE)
 pred_mat_cat <- dry_run_cat$predictorMatrix
 imp_meth_cat <- dry_run_cat$method
 
+imp_meth_cat[imp_meth_cat != ""] <- "rf" # Random forest for everything, then overwrite
 imp_meth_cat[c("nkill", "nwound")] <- "pmm"
 imp_meth_cat[c("nperps_cat")] <- "polr" # Proportional Odds Logistic Regression for the ordered factor
 imp_meth_cat[c("country", "provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
-imp_meth_cat[imp_meth_cat != ""] <- "rf" # Random forest for everything else
 
 pred_mat_cat[, vars_to_exclude] <- 0
 pred_mat_cat[vars_to_exclude, ] <- 0
@@ -608,7 +608,7 @@ ggplot(cm_df, aes(x = Reference, y = Prediction, fill = Freq)) +
 #| fig-height: 10
 #| out-width: "100%"
 # Tidy the data and calculate Odds Ratios at 95% confidence
-plot_data <- tidy(pooled_results, conf.int = TRUE, exponentiate = TRUE)
+plot_data <- tidy(pooled_zinb_results, conf.int = TRUE, exponentiate = TRUE)
 plot_data <- plot_data %>%
   # Remove the Intercept, as it only represents the baseline odds and skews the plot
   filter(term != "(Intercept)") %>%
@@ -697,7 +697,7 @@ forest_plot_quad <- ggplot(plot_data, aes(x = estimate, y = reorder(clean_term, 
   geom_vline(xintercept = 1, linetype = "dashed", color = "darkgrey", size = 1) +
   geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2, color = "#2C3E50", size = 0.8) +
   geom_point(size = 3, color = "#E74C3C") +
-  scale_x_log10() + # Use a logarithmic scale for the X-axis
+  #scale_x_log10() + # Use a logarithmic scale for the X-axis
   facet_wrap(~ category, scales = "free_y", ncol = 2) + # 4 times the chart, bruv
   scale_color_brewer(palette = "Set1") +
   labs(
@@ -777,9 +777,13 @@ When examining the effect that tactics and group composition has on casualties i
 #| cache: true
 gtd_clean_final$nperps_cat <- relevel(gtd_clean_final$nperps_cat, ref = "Lone Wolf")
 
-zinb_models <- with(gtd_clean_final, 
+# Do not average the data. Run the zeroinfl model across all 5 datasets and pool!
+zinb_models <- with(mice_cat_results, 
                     zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
                              dist = "negbin"))
+
+pooled_zinb_results <- pool(zinb_models)
+summary(pooled_zinb_results)
 ```
 
 ```{r rootogram_plot_3, include=FALSE}
@@ -789,15 +793,16 @@ plot_nb <- glm.nb(nkill ~ nperps_cat + region + attacktype1 + weaptype1,
 
 # Unfortunately these zinb calculations don't render. However the result matches
 # the nb plot identically.
-#plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
-#                      data = gtd_clean_final, dist = "negbin")
+plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
+                      data = gtd_clean_final, dist = "negbin")
 # ZINB calculations
-#expected_probs_zinb <- predict(plot_zinb, type = "prob")
-#expected_freq_zinb <- colSums(expected_probs_zinb[, 1:(plot_limit + 1)])
+expected_probs_zinb <- predict(plot_zinb, type = "prob")
+expected_freq_zinb <- colSums(expected_probs_zinb[, 1:(plot_limit + 1)])
 ```
 
 ```{r rootogram_plot_4, include=FALSE}
 # Process the Data (Filtering to 25 to keep the plot readable)
+#| cache: true
 plot_limit <- 25 
 
 # Standard NB calculations
@@ -813,12 +818,12 @@ df_nb <- data.frame(
 ) %>%
   mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
 
-#df_zinb <- data.frame(
-#  Count = 0:plot_limit,
-#  Observed = as.numeric(observed_freq),
-#  Expected = as.numeric(expected_freq_zinb)
-#) %>%
-#  mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
+df_zinb <- data.frame(
+  Count = 0:plot_limit,
+  Observed = as.numeric(observed_freq),
+  Expected = as.numeric(expected_freq_zinb)
+) %>%
+  mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
 ```
 
 ```{r rootogram_plot_5, include=FALSE}
@@ -853,8 +858,8 @@ build_rootogram <- function(data, title) {
 #| fig-align: "center"
 # Create both plots
 plot1 <- build_rootogram(df_nb, "Standard Negative Binomial")
-#plot2 <- build_rootogram(df_zinb, "Zero-Inflated Negative Binomial")
-plot1 # | plot2 (ZINB identical to NB, can omit)
+plot2 <- build_rootogram(df_zinb, "Zero-Inflated Negative Binomial")
+plot1 | plot2 #(ZINB identical to NB, can omit)
 ```
 
 ```{r zinb_model_2, include=FALSE}
@@ -883,37 +888,37 @@ tidy.zeroinfl <- function(x, conf.int = FALSE, conf.level = 0.95, ...) {
 }
 
 # Extract the results with confidence intervals
-#pooled_zinb_results <- pool(zinb_models)
-#zinb_analysis_raw <- tidy(pooled_zinb_results, conf.int = TRUE)
+pooled_zinb_results <- pool(zinb_models)
+zinb_analysis_raw <- tidy(pooled_zinb_results, conf.int = TRUE)
 
 # View the raw summary
-#summary(pooled_zinb_results)
+summary(pooled_zinb_results)
 # Extract the results
-#zinb_analysis <- tidy(pooled_zinb_results, conf.int = TRUE)
+zinb_analysis <- tidy(pooled_zinb_results, conf.int = TRUE)
 # Clean up the names and recreate the 'component' column
-#zinb_analysis <- zinb_analysis_raw %>%
-#  mutate(
+zinb_analysis <- zinb_analysis_raw %>%
+  mutate(
     # Create the component column based on the prefix
-#    component = ifelse(grepl("^count_", term), "count", "zero"),
+    component = ifelse(grepl("^count_", term), "count", "zero"),
     # Strip the prefix out of the term name
-#    term = gsub("^count_|^zero_", "", term)
-#  )
+    term = gsub("^count_|^zero_", "", term)
+  )
 
 # Separate the models for easier exponentiation and reading
-#count_model_results <- zinb_analysis %>% filter(component == "count")
-#zero_model_results <- zinb_analysis %>% filter(component == "zero")
+count_model_results <- zinb_analysis %>% filter(component == "count")
+zero_model_results <- zinb_analysis %>% filter(component == "zero")
 
 # Exponentiate the count model to get Incidence Rate Ratios (IRRs)
-#count_model_irrs <- count_model_results %>%
-#  mutate(estimate_irr = exp(estimate),
-#         conf.low_irr = exp(conf.low),
-#         conf.high_irr = exp(conf.high))
+count_model_irrs <- count_model_results %>%
+  mutate(estimate_irr = exp(estimate),
+         conf.low_irr = exp(conf.low),
+         conf.high_irr = exp(conf.high))
 
 # Exponentiate the zero model to get Odds Ratios (ORs)
-#zero_model_ors <- zero_model_results %>%
-#  mutate(estimate_or = exp(estimate),
-#         conf.low_or = exp(conf.low),
-#         conf.high_or = exp(conf.high))
+zero_model_ors <- zero_model_results %>%
+  mutate(estimate_or = exp(estimate),
+         conf.low_or = exp(conf.low),
+         conf.high_or = exp(conf.high))
 ```
 
 ## Future work and next steps
