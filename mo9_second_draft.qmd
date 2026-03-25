@@ -71,6 +71,7 @@ library(gridExtra)# side-by-side models
 library(patchwork)# another attempt at side-by-side models
 library(countreg) # rootogram
 library(topmodels)# another rootogram implementation
+library(forcats)  # Bin sparse categorical factor levels
 ```
 
 ```{r data_load, include=FALSE}
@@ -111,7 +112,12 @@ gtd_clean <- gtd_full %>%
     long_round = round(longitude, 1)
   ) %>%
   filter(event_date >= as.Date("2000-01-01") & event_date <= as.Date("2021-01-01")) %>%
-  filter(is.na(nperps) | nperps < 50)
+  filter(is.na(nperps) | nperps < 50) %>%
+  mutate( # These weapon types (11 (Biological), 12 (Chemical), 13 (Radiological), and 17 (Fake Weapons))
+    weaptype1 = fct_collapse(as.factor(weaptype1), # Need to be combined and binned into a single category to avoid quasi-complete seperation
+      "Rare/Other" = c("11", "12", "13", "14", "17", "111", "112") # Grouping Bio, Chem, Rad, Nuke, Fake, Sabotage, Other
+    )
+  )
 
 acled_clean <- acled_full %>%
   mutate(
@@ -697,7 +703,7 @@ forest_plot_quad <- ggplot(plot_data, aes(x = estimate, y = reorder(clean_term, 
   geom_vline(xintercept = 1, linetype = "dashed", color = "darkgrey", size = 1) +
   geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2, color = "#2C3E50", size = 0.8) +
   geom_point(size = 3, color = "#E74C3C") +
-  #scale_x_log10() + # Use a logarithmic scale for the X-axis
+  scale_x_log10() + # Use a logarithmic scale for the X-axis
   facet_wrap(~ category, scales = "free_y", ncol = 2) + # 4 times the chart, bruv
   scale_color_brewer(palette = "Set1") +
   labs(
@@ -721,7 +727,7 @@ forest_plot_quad
 ```{r complete_full_data, include=FALSE}
 #| cache: true
 # Extract all 5 models, then average and consolidate, to attempt to reduce variance
-imputed_long <- complete(final_imputation, action = "long")
+imputed_long <- complete(mice_cont_results, action = "long")
 imputed_averaged <- imputed_long %>%
   mutate(
     # Enforce the logic: If it's a suicide attack and MICE somehow guessed < 1, bump it to 1
@@ -778,16 +784,28 @@ When examining the effect that tactics and group composition has on casualties i
 gtd_clean_final$nperps_cat <- relevel(gtd_clean_final$nperps_cat, ref = "Lone Wolf")
 
 # Do not average the data. Run the zeroinfl model across all 5 datasets and pool!
-zinb_models <- with(mice_cat_results, 
-                    zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
+zinb_models <- with(mice_cont_results, 
+                    zeroinfl(nkill ~ nperps + region | weaptype1, 
                              dist = "negbin"))
 
 pooled_zinb_results <- pool(zinb_models)
 summary(pooled_zinb_results)
 ```
 
+```{r colinear, include=FALSE}
+# Extract one dataset to test
+test_data <- complete(mice_cat_results, 1)
+
+# Run a dummy model to check for collinearity
+dummy_model <- glm(nkill ~ nperps_cat + region + attacktype1 + weaptype1, data = test_data)
+
+# This will print the exact variables that are perfectly correlated
+alias(dummy_model)
+```
+
 ```{r rootogram_plot_3, include=FALSE}
 #| cache: true
+plot_limit <- 25 
 plot_nb <- glm.nb(nkill ~ nperps_cat + region + attacktype1 + weaptype1, 
                   data = gtd_clean_final)
 
@@ -796,14 +814,13 @@ plot_nb <- glm.nb(nkill ~ nperps_cat + region + attacktype1 + weaptype1,
 plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
                       data = gtd_clean_final, dist = "negbin")
 # ZINB calculations
-expected_probs_zinb <- predict(plot_zinb, type = "prob")
+expected_probs_zinb <- predict(plot_zinb, type = "prob", at = 0:plot_limit)
 expected_freq_zinb <- colSums(expected_probs_zinb[, 1:(plot_limit + 1)])
 ```
 
 ```{r rootogram_plot_4, include=FALSE}
 # Process the Data (Filtering to 25 to keep the plot readable)
 #| cache: true
-plot_limit <- 25 
 
 # Standard NB calculations
 mu_nb <- predict(plot_nb, type = "response")
@@ -892,9 +909,7 @@ pooled_zinb_results <- pool(zinb_models)
 zinb_analysis_raw <- tidy(pooled_zinb_results, conf.int = TRUE)
 
 # View the raw summary
-summary(pooled_zinb_results)
-# Extract the results
-zinb_analysis <- tidy(pooled_zinb_results, conf.int = TRUE)
+summary(zinb_analysis_raw)
 # Clean up the names and recreate the 'component' column
 zinb_analysis <- zinb_analysis_raw %>%
   mutate(
