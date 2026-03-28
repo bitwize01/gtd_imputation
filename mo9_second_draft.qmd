@@ -65,6 +65,7 @@ library(Metrics)  # For RMSE and MAE calculations
 library(caret)    # Confusion matrix
 library(broom)    # Forest Plot
 library(broom.mixed) # additional tidy() functions
+library(broom.helpers) # even more additional tidy() functions
 library(pscl)     # ZINB regression
 library(remotes)  # Grab repos not on CRAN FORGE
 library(gridExtra)# side-by-side models
@@ -77,7 +78,8 @@ library(forcats)  # Bin sparse categorical factor levels
 ```{r data_load, include=FALSE}
 #| cache: true
 ## Data Load (Get a cuppa coffee...)
-gtd_full <- read.csv('.\\Data\\globalterrorismdb_0522dist.csv')
+gtd_full <- read.csv('.\\Data\\globalterrorismdb_0522dist.csv', fileEncoding = "latin1")
+# or try fileEncoding = "windows-1252" if latin1 leaves weird artifacts
 acled_full <- read.csv('.\\Data\\ACLED_Data_2026-02-08.csv')
 ```
 
@@ -223,7 +225,7 @@ imp_meth_cont[c("nperps", "nkill", "nwound")] <- "pmm"
 imp_meth_cont[c("country", "provstate")] <- "cart" # Classification and regression trees to handle high-cardinality geographic factors
 
 # Exclude high-factor variables from predicting to prevent RF crashes
-vars_to_exclude <- c("eventid", "country_txt", "region_txt")
+vars_to_exclude <- c("eventid", "country", "provstate", "country_txt", "region_txt")
 pred_mat_cont[, vars_to_exclude] <- 0
 pred_mat_cont[vars_to_exclude, ] <- 0
 
@@ -245,6 +247,10 @@ impute_data_cat <- gtd_clean %>%
 dry_run_cat <- mice(impute_data_cat, maxit = 0, printFlag = FALSE)
 pred_mat_cat <- dry_run_cat$predictorMatrix
 imp_meth_cat <- dry_run_cat$method
+post_cat <- dry_run_cat$post # Extract the post-processing vector
+# This tells MICE to look at the currently imputed values (imp[[j]]), 
+# check the original data for suicide == 1, and downgrade "Large Group" guesses.
+post_cat["nperps_cat"] <- "imp[[j]][data$suicide[!r[, j]] == 1 & imp[[j]] == 'Large Group'] <- 'Small Cell'"
 
 imp_meth_cat[imp_meth_cat != ""] <- "rf" # Random forest for everything, then overwrite
 imp_meth_cat[c("nkill", "nwound")] <- "pmm"
@@ -256,10 +262,11 @@ pred_mat_cat[vars_to_exclude, ] <- 0
 
 # Run Model B: nperps_cat as factorized binned categorical variable
 mice_cat_results <- mice(impute_data_cat, 
-                         m = 5, 
-                         maxit = 10, 
+                         m = 5, # Full Run: 5 
+                         maxit = 10, # Full Run: 10
                          method = imp_meth_cat, 
                          predictorMatrix = pred_mat_cat, 
+                         post = post_cat,
                          seed = 101)
 ```
 
@@ -587,7 +594,7 @@ metrics_table %>%
 #| cache: true
 #| label: fig5
 #| fig-cap: "Confusion Matrix for Imputed Categories"
-cm_df <- as.data.frame(conf_matrix$table)
+cm_df <- as.data.frame(conf_matrix_cat$table)
 ggplot(cm_df, aes(x = Reference, y = Prediction, fill = Freq)) +
   geom_tile(color = "black", alpha = 0.8) +
   geom_text(aes(label = Freq), size = 6, color = ifelse(cm_df$Freq > mean(cm_df$Freq), "white", "black")) +
@@ -604,6 +611,76 @@ ggplot(cm_df, aes(x = Reference, y = Prediction, fill = Freq)) +
     axis.text = element_text(size = 11),
     axis.title = element_text(size = 12, face = "bold")
   )
+```
+
+```{r complete_full_data, include=FALSE}
+#| cache: true
+# Extract all 5 models, then average and consolidate, to attempt to reduce variance
+imputed_long <- complete(mice_cont_results, action = "long")
+imputed_averaged <- imputed_long %>%
+  mutate(
+    # Enforce the logic: If it's a suicide attack and MICE somehow guessed < 1, bump it to 1
+    nperps = ifelse(suicide == 1 & nperps < 1, 1, nperps)
+  ) %>%
+  group_by(eventid) %>%
+  summarise(
+    # Calculate the mean and round to the nearest whole number
+    nperps_avg = round(mean(nperps)),
+    nkill_avg = round(mean(nkill)),
+    nwound_avg = round(mean(nwound))
+  ) %>%
+  ungroup() %>%
+  # build nperps_cat
+  mutate(
+    nperps_cat = case_when(
+      nperps_avg == 1 ~ "Lone Wolf",
+      nperps_avg > 1 & nperps_avg <= 5 ~ "Small Cell",
+      nperps_avg > 5 ~ "Large Group",
+      TRUE ~ NA_character_
+    ),
+    nperps_cat = as.factor(nperps_cat)
+  )
+
+gtd_clean_final <- gtd_clean %>%
+  dplyr::select(-c(nperps, nperps_cat, nkill, nwound)) %>%
+  left_join(imputed_averaged, by = "eventid") %>%
+  rename(
+    nperps = nperps_avg,
+    nkill = nkill_avg,
+    nwound = nwound_avg
+  )
+
+# Verify the final structure
+str(gtd_clean_final %>% dplyr::select(eventid, nperps, nperps_cat, nkill, nwound))
+rm(imputed_long, imputed_averaged, impute_data)
+```
+
+```{r nperps_on_nkill, include=FALSE}
+#| cache: true
+# Evaluate the effects of perpetrator group size on the number of individuals killed in the attack
+kruskal.test(nkill ~ nperps_cat, data = gtd_clean_final)
+# Result is near-zero, so what is the relationship between category and nkill?
+pairwise.wilcox.test(gtd_clean_final$nkill, gtd_clean_final$nperps_cat,
+                     p.adjust.method = "holm")
+```
+
+A Kruskal-Wallis rank sum test was conducted to determine if there were differences in the number of casualties (nkill) based on the size of the perpetrator group. The results indicated a highly significant difference in the distribution of casualties between Lone Wolf, Small Cell, and Large Group attacks ($H(2) = 1210.5, p < 0.001$). To determine where the significant differences in casualties lay among the perpetrator categories, a post-hoc pairwise Wilcoxon rank sum test was conducted using the Holm method to control for multiple comparisons. The analysis revealed that Lone Wolf attacks resulted in significantly different casualty distributions when compared to both Small Cells ($p < 0.001$) and Large Groups ($p < 0.001$). Notably, there was no statistically significant difference in fatalities between Small Cells and Large Groups ($p = 0.53$). This suggests a critical threshold effect in terrorist operations: while independent actors exhibit a distinct lethality profile, the introduction of even a small network (2-5 perpetrators) shifts the casualty distribution to match that of large-scale group attacks. Consequently, casualty metrics serve as a strong discriminator for imputing independent actors, but offer diminishing returns when attempting to differentiate the size of multi-perpetrator networks.
+
+When examining the effect that tactics and group composition has on casualties in terror attacks, I was concerned that the extreme overdispersion of casualties would result in a standard regression model underestimating the standard errors, leading to false significance. This is a particular risk when considering the imputed dataset, which may already have been overrepresenting the number of individual perpetrators. As a result, I implemented a Zero-inflated negative binomial (ZINB) model to examine the relationship between nkill and the other predictors. The ZINB model separates the structurally missing (data not determined by GTD) data from the attack data where the attack was a failure. However, upon production of the model, its predictors bias matched the Negative Binomial result. The model slightly under-predicts single fatalities at the expense of an over-prediction of all other values, but overall the model performs well.
+
+```{r zinb_model, include=FALSE}
+#| cache: true
+gtd_clean_final$nperps_cat <- relevel(gtd_clean_final$nperps_cat, ref = "Lone Wolf")
+
+# Do not average the data. Run the zeroinfl model across all 5 datasets and pool!
+zinb_models <- with(mice_cont_results, 
+                    zeroinfl(nkill ~ nperps + region | weaptype1, 
+                             dist = "negbin"))
+```
+
+```{r tidy_zinb, include=FALSE}
+pooled_zinb_results <- pool(zinb_models)
+summary(pooled_zinb_results)
 ```
 
 ```{r mice_results_plot}
@@ -722,74 +799,6 @@ forest_plot_quad <- ggplot(plot_data, aes(x = estimate, y = reorder(clean_term, 
   )
 
 forest_plot_quad
-```
-
-```{r complete_full_data, include=FALSE}
-#| cache: true
-# Extract all 5 models, then average and consolidate, to attempt to reduce variance
-imputed_long <- complete(mice_cont_results, action = "long")
-imputed_averaged <- imputed_long %>%
-  mutate(
-    # Enforce the logic: If it's a suicide attack and MICE somehow guessed < 1, bump it to 1
-    nperps = ifelse(suicide == 1 & nperps < 1, 1, nperps)
-  ) %>%
-  group_by(eventid) %>%
-  summarise(
-    # Calculate the mean and round to the nearest whole number
-    nperps_avg = round(mean(nperps)),
-    nkill_avg = round(mean(nkill)),
-    nwound_avg = round(mean(nwound))
-  ) %>%
-  ungroup() %>%
-  # build nperps_cat
-  mutate(
-    nperps_cat = case_when(
-      nperps_avg == 1 ~ "Lone Wolf",
-      nperps_avg > 1 & nperps_avg <= 5 ~ "Small Cell",
-      nperps_avg > 5 ~ "Large Group",
-      TRUE ~ NA_character_
-    ),
-    nperps_cat = as.factor(nperps_cat)
-  )
-
-gtd_clean_final <- gtd_clean %>%
-  dplyr::select(-c(nperps, nperps_cat, nkill, nwound)) %>%
-  left_join(imputed_averaged, by = "eventid") %>%
-  rename(
-    nperps = nperps_avg,
-    nkill = nkill_avg,
-    nwound = nwound_avg
-  )
-
-# Verify the final structure
-str(gtd_clean_final %>% dplyr::select(eventid, nperps, nperps_cat, nkill, nwound))
-rm(imputed_long, imputed_averaged, impute_data)
-```
-
-```{r nperps_on_nkill, include=FALSE}
-#| cache: true
-# Evaluate the effects of perpetrator group size on the number of individuals killed in the attack
-kruskal.test(nkill ~ nperps_cat, data = gtd_clean_final)
-# Result is near-zero, so what is the relationship between category and nkill?
-pairwise.wilcox.test(gtd_clean_final$nkill, gtd_clean_final$nperps_cat,
-                     p.adjust.method = "holm")
-```
-
-A Kruskal-Wallis rank sum test was conducted to determine if there were differences in the number of casualties (nkill) based on the size of the perpetrator group. The results indicated a highly significant difference in the distribution of casualties between Lone Wolf, Small Cell, and Large Group attacks ($H(2) = 1136.6, p < 0.001$). To determine where the significant differences in casualties lay among the perpetrator categories, a post-hoc pairwise Wilcoxon rank sum test was conducted using the Holm method to control for multiple comparisons. The analysis revealed that Lone Wolf attacks resulted in significantly different casualty distributions when compared to both Small Cells ($p < 0.001$) and Large Groups ($p < 0.001$). Notably, there was no statistically significant difference in fatalities between Small Cells and Large Groups ($p = 0.53$). This suggests a critical threshold effect in terrorist operations: while independent actors exhibit a distinct lethality profile, the introduction of even a small network (2-5 perpetrators) shifts the casualty distribution to match that of large-scale group attacks. Consequently, casualty metrics serve as a strong discriminator for imputing independent actors, but offer diminishing returns when attempting to differentiate the size of multi-perpetrator networks.
-
-When examining the effect that tactics and group composition has on casualties in terror attacks, I was concerned that the extreme overdispersion of casualties would result in a standard regression model underestimating the standard errors, leading to false significance. This is a particular risk when considering the imputed dataset, which may already have been overrepresenting the number of individual perpetrators. As a result, I implemented a Zero-inflated negative binomial (ZINB) model to examine the relationship between nkill and the other predictors. The ZINB model separates the structurally missing (data not determined by GTD) data from the attack data where the attack was a failure. However, upon production of the model, its predictors bias matched the Negative Binomial result. The model slightly under-predicts single fatalities at the expense of an over-prediction of all other values, but overall the model performs well.
-
-```{r zinb_model, include=FALSE}
-#| cache: true
-gtd_clean_final$nperps_cat <- relevel(gtd_clean_final$nperps_cat, ref = "Lone Wolf")
-
-# Do not average the data. Run the zeroinfl model across all 5 datasets and pool!
-zinb_models <- with(mice_cont_results, 
-                    zeroinfl(nkill ~ nperps + region | weaptype1, 
-                             dist = "negbin"))
-
-pooled_zinb_results <- pool(zinb_models)
-summary(pooled_zinb_results)
 ```
 
 ```{r colinear, include=FALSE}
