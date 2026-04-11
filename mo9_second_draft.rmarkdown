@@ -83,9 +83,9 @@ library(ranger)   # Track changes in variable importance over time (!)
 ```{r data_load, include=FALSE}
 #| cache: true
 ## Data Load (Get a cuppa coffee...)
-gtd_full <- read.csv('.\\Data\\globalterrorismdb_0522dist.csv', fileEncoding = "latin1")
+gtd_full <- read.csv(file.path("Data", "globalterrorismdb_0522dist.csv"), fileEncoding = "latin1")
 # or try fileEncoding = "windows-1252" if latin1 leaves weird artifacts
-acled_full <- read.csv('.\\Data\\ACLED_Data_2026-02-08.csv')
+acled_full <- read.csv(file.path("Data", "ACLED_Data_2026-02-08.csv"))
 ```
 
 ```{r data_shape, include=FALSE}
@@ -318,7 +318,7 @@ post_cat["nperps_cat"] <- "imp[[j]][data$suicide[!r[, j]] == 1 & imp[[j]] == 'La
 
 imp_meth_cat[imp_meth_cat != ""] <- "rf" # Random forest for everything, then overwrite
 imp_meth_cat[c("nkill", "nwound")] <- "pmm"
-imp_meth_cat[c("nperps_cat")] <- "polr" # Proportional Odds Logistic Regression for the ordered factor
+imp_meth_cat[c("nperps_cat")] <- "rf" # Polr unsuitable due to mixed weights at boundries for key predictors
 imp_meth_cat[c("country", "provstate", "gname")] <- "cart" # cart for high-cardinality factors
 
 pred_mat_cat[, vars_to_exclude] <- 0   # column zero only — same logic as Model A
@@ -633,37 +633,65 @@ The high degree of missing fields reflects a strategy by the GTD researchers at 
 excluded_types_nperps <- c("Unknown", "Unarmed Assault", "Hijacking",
                             "Hostage Taking (Barricade Incident)", "Hostage Taking (Kidnapping)")
 
-# Pool all 8 imputed datasets, join attacktype1_txt from gtd_clean (not in base_vars)
-attacktype_by_nperps <- complete(mice_cat_results, action = "long") %>%
-  left_join(gtd_clean %>% dplyr::select(eventid, attacktype1_txt), by = "eventid") %>%
-  filter(!is.na(attacktype1_txt), !attacktype1_txt %in% excluded_types_nperps,
-         !is.na(nperps_cat)) %>%
-  group_by(.imp, nperps_cat, attacktype1_txt) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  group_by(.imp, nperps_cat) %>%
-  mutate(pct = n / sum(n) * 100) %>%
-  # Average percentages across the 8 imputations
-  group_by(nperps_cat, attacktype1_txt) %>%
+# Helper: pool completed imputations and compute attack type % by nperps_cat
+build_attacktype_plot_data <- function(completed_long) {
+  completed_long %>%
+    left_join(gtd_clean %>% dplyr::select(eventid, attacktype1_txt), by = "eventid") %>%
+    filter(!is.na(attacktype1_txt), !attacktype1_txt %in% excluded_types_nperps,
+           !is.na(nperps_cat)) %>%
+    group_by(.imp, nperps_cat, attacktype1_txt) %>%
+    summarise(n = n(), .groups = "drop") %>%
+    group_by(.imp, nperps_cat) %>%
+    mutate(pct = n / sum(n) * 100) %>%
+    group_by(nperps_cat, attacktype1_txt) %>%
+    summarise(pct = mean(pct), .groups = "drop") %>%
+    mutate(nperps_cat = ordered(nperps_cat,
+             levels = c("Lone Wolf", "Small Cell", "Large Group")))
+}
+
+# Model B: nperps_cat imputed directly via POLR
+attacktype_cat <- build_attacktype_plot_data(
+  complete(mice_cat_results, action = "long")
+) %>% mutate(model = "Model B: Categorical")
+
+# Model A: derive nperps_cat from imputed continuous nperps
+attacktype_cont <- complete(mice_cont_results, action = "long") %>%
+  mutate(nperps_cat = case_when(
+    nperps == 1               ~ "Lone Wolf",
+    nperps > 1 & nperps <= 5  ~ "Small Cell",
+    nperps > 5                ~ "Large Group"
+  )) %>%
+  build_attacktype_plot_data() %>%
+  mutate(model = "Model A: Continuous")
+
+# Fix attack type order using Model B proportions as reference
+level_order <- attacktype_cat %>%
+  group_by(attacktype1_txt) %>%
   summarise(pct = mean(pct), .groups = "drop") %>%
+  arrange(pct) %>%
+  pull(attacktype1_txt)
+
+attacktype_combined <- bind_rows(attacktype_cat, attacktype_cont) %>%
   mutate(
-    nperps_cat = factor(nperps_cat,
-      levels = c("Lone Wolf", "Small Cell", "Large Group")),
-    attacktype1_txt = reorder(attacktype1_txt, pct)
+    attacktype1_txt = factor(attacktype1_txt, levels = level_order),
+    model = factor(model, levels = c("Model A: Continuous (RF + PMM)",
+                                      "Model B: Categorical (POLR)"))
   )
 
-ggplot(attacktype_by_nperps, aes(x = attacktype1_txt, y = pct, fill = nperps_cat)) +
+ggplot(attacktype_combined, aes(x = attacktype1_txt, y = pct, fill = nperps_cat)) +
   geom_col(position = "dodge") +
   geom_text(aes(label = sprintf("%.1f%%", pct)),
-            position = position_dodge(width = 0.9), hjust = -0.1, size = 2.8) +
+            position = position_dodge(width = 0.9), hjust = -0.1, size = 2.5) +
   coord_flip() +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  facet_wrap(~model, ncol = 2) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.18))) +
   scale_fill_manual(values = c("Lone Wolf"   = "steelblue",
                                 "Small Cell"  = "tomato",
                                 "Large Group" = "forestgreen")) +
   labs(
     x = NULL,
     y = "Percentage of Attacks (%)",
-    title = "Attack Type Distribution by Perpetrator Group Size\n(Pooled Across Imputed Datasets)",
+    title = "Attack Type Distribution by Perpetrator Group Size:\nModel A (Continuous) vs. Model B (Categorical)",
     fill = NULL
   ) +
   theme_minimal() +
@@ -677,13 +705,13 @@ After ensuring that my training and test data contained a sufficient proportion 
 
 For variables that have a high degree of impact on the outcome of a record, but also have a high degree of cardinality such as group name, country, and state/province, I applied a Classification and Regression tree (CART) function. CART operates by building decision trees to recursively partition predictors into pools of similar results, and then builds a tree based off the other low-cardinality predictors (year, region, attack type, weapon type) to sort the records. This sidesteps the dimensionality problem exemplified by random forest entirely by using the predictor space to find similar records, then sampling from their observed values. Like PMM, the imputed value is always a real observed group name, never a nonsensical interpolation.
 
-For the ordered categorical factor I made grouping the number of perpetrators, I employed a Proportional Odds Logistic Regression (POLR) function. POLR is an extension of binary logistic regression for ordered categorical outcomes. Rather than modeling a single binary boundary, it models K-1 cumulative boundaries simultaneously, one for each transition between adjacent levels, weighing the proportional odds of the predictors at each boundary level. This method does come with a hazard as it establishes the same predictive effect as each boundary is crossed. For instance, 80% of suicide attacks in the GTD involve only a single perpetrator, making this a highly impactful predictor, and of the remainder, only half as many large group attacks were suicide attacks as compared to small groups. With the predictor effect of suicide attacks varying strongly across groups.
+For the ordered categorical factor I made grouping the number of perpetrators, I examined the use of a Proportional Odds Logistic Regression (POLR) function. POLR is an extension of binary logistic regression for ordered categorical outcomes. Rather than modeling a single binary boundary, it models K-1 cumulative boundaries simultaneously, one for each transition between adjacent levels, weighing the proportional odds of the predictors at each boundary level. This method does come with a hazard as it establishes the same predictive effect as each boundary is crossed. For instance, 80% of suicide attacks in the GTD involve only a single perpetrator, making this a highly impactful predictor, and of the remainder, only half as many large group attacks were suicide attacks as compared to small groups. With the predictor effect of suicide attacks varying strongly across groups. In my evaluation of the number of perpetrators against the GTD, the difference in predictors between categories (see figure 4) resulted in a strong bias 
 
 For all other variables being imputed, I used a random forest model. Random Forest's suitability as the default imputation method in MICE pipelines stems from its flexibility and robustness as a non-parametric learner. Unlike parametric methods such as POLR or linear regression, Random Forest imposes no assumptions about the underlying distribution or functional form of relationships in the data, instead discovering structure empirically through recursive partitioning. This allows it to capture complex interactions and non-linear relationships between predictors — such as the interplay between region, attack type, and year in determining perpetrator counts that parametric methods would miss or misrepresent. Its native handling of mixed data types eliminates the need for manual preprocessing or dummy coding of categorical variables, and its ensemble aggregation naturally dampens the influence of irrelevant predictors, since uninformative variables are selected at splits only by chance and contribute little to the final predictions. Together these properties make Random Forest a robust, largely assumption-free default that can be applied broadly across the heterogeneous predictor space of a dataset like the GTD without requiring variable-by-variable method tuning.
 
 ## Exlusion of predictors and imputed fields
 
-It is also critical to ensure the MICE imputation process avoids using some varibles as predictors that would be highly colinear in a regression model (such as the event id) or too closely related to another value, such as including on both country code and country name. Other values such as weapon type were excluded due to a large proportion of dissimilar categories which simultaneously have very few records. My testing revealed multiple weapon types which caused MICE to inflict ridge penalties in the row prediction due to a lack of covariates for the imputation functions to pull records upon, and binning weapon types across dissimilar categories was impractical.
+It is also critical to ensure the MICE imputation process avoids using some variables as predictors that would be highly colinear in a regression model (such as the event id) or too closely related to another value, such as including on both country code and country name. Other values such as weapon type were excluded due to a large proportion of dissimilar categories which simultaneously have very few records. My testing revealed multiple weapon types which caused MICE to inflict ridge penalties in the row prediction due to a lack of covariates for the imputation functions to pull records upon, and binning weapon types across dissimilar categories was impractical.
 
 ## Computational resources and Performance
 
