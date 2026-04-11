@@ -683,7 +683,7 @@ For all other variables being imputed, I used a random forest model. Random Fore
 
 ## Exlusion of predictors and imputed fields
 
-It is also critical to ensure the MICE imputation process avoids using some varibles as predictors that would be highly colinear in a regression model (such as the event id) or too closely related to another value, such as including on both country code and country name. Other values such as weapon type were excluded due to a large proportion of dissimilar categories which simultaneously have very few records. My testing revealed multiple weapon types which caused MICE to inflict ridge penalties in the row prediction due to a lack of covariates for the imputation functions to pull records upon, and binning weapon types across dissimilar categories was impractical.
+It is also critical to ensure the MICE imputation process avoids using some variables as predictors that would be highly colinear in a regression model (such as the event id) or too closely related to another value, such as including on both country code and country name. Other values such as weapon type were excluded due to a large proportion of dissimilar categories which simultaneously have very few records. My testing revealed multiple weapon types which caused MICE to inflict ridge penalties in the row prediction due to a lack of covariates for the imputation functions to pull records upon, and binning weapon types across dissimilar categories was impractical.
 
 ## Computational resources and Performance
 
@@ -1056,7 +1056,7 @@ zero_model_ors <- zero_model_results %>%
 
 ```{r mice_results_plot}
 #| cache: true
-#| label: fig6
+#| label: fig8
 #| fig-cap: "Predictors of Independent Actor (Lone Wolf) Terrorism"
 #| fig-width: 12
 #| fig-height: 10
@@ -1246,13 +1246,13 @@ build_rootogram <- function(data, title) {
 
 ```{r rootogram_plot_6, include=TRUE}
 #| cache: true
-#| label: fig7
+#| label: fig9
 #| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 6
 #| fig-height: 3
-#| fig-cap: "Rootogram comparison demonstrating model fit. The Zero-Inflated model and the Standard Negative Binomial exhibit similar performance"
+#| fig-cap: "Rootogram comparison demonstrating model fit between The Zero-Inflated model and the Standard Negative Binomial model"
 #| fig-align: "center"
 # Create both plots
 plot1 <- build_rootogram(df_nb, "Standard Negative Binomial")
