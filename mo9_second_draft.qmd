@@ -14,7 +14,12 @@ margin-top: 1in
 margin-bottom: 1in
 cap-location: top
 
-format: 
+include-in-header:
+  text: |
+    \usepackage{etoolbox}
+    \preto{\tableofcontents}{\newpage}
+
+format:
   pdf:
     toc: true
     toc-depth: 2
@@ -195,7 +200,7 @@ acled_missingness_summary <- acled_clean %>%
 ```{r mice_nperps, include=FALSE}
 #| cache: true
 # Generate full predictor matrix, divide nperps into categorical variable
-# Although we don't want to impute on this to avoid colinearity with nperps
+# Although we don't want to impute on this to avoid collinearity with nperps
 gtd_clean <- gtd_clean %>%
   mutate(nperps = if_else(suicide == 1 & is.na(nperps), 1, nperps)) %>%
   mutate(
@@ -214,9 +219,9 @@ gtd_clean <- gtd_clean %>%
   mutate(nperps_cat = ordered(nperps_cat, levels = c("Lone Wolf", "Small Cell", "Large Group")))
 
 # Base fields needed for both MICE runs
+# Improvement 1: iyear_sq added alongside iyear to capture the non-linear time trend.
 # Improvement 2: gname added as a passive predictor. Known group names are strongly
 # predictive of perpetrator count (ISIL = large cell; NA gname = likely lone wolf).
-# Improvement 1: iyear_sq added alongside iyear to capture the non-linear time trend.
 base_vars <- c("eventid", "nkill", "nwound", "attacktype1", "weaptype1", "weaptype1_cat", 
                "targtype1", "suicide", "region", "country", "iyear", "iyear_sq",
                "country_txt", "region_txt", "provstate", "gname")
@@ -228,7 +233,7 @@ base_vars <- c("eventid", "nkill", "nwound", "attacktype1", "weaptype1", "weapty
 factor_vars <- c("attacktype1", "weaptype1", "weaptype1_cat", "targtype1", "suicide", 
                  "region", "country", "country_txt", "region_txt", "provstate", "gname")
 
-# --- Improvement 3: stratified train / test split on observed rows ---
+# Improvement 3: stratified train / test split on observed rows
 # Stratifying by nperps_cat ensures each class (Lone Wolf / Small Cell / Large Group)
 # is proportionally represented in both splits, reducing evaluation variance caused
 # by the severe class imbalance (~65% Lone Wolf in the observed data).
@@ -263,16 +268,16 @@ imp_meth_cont[c("country", "provstate", "gname")] <- "cart" # cart for high-card
 # "no covariates found" for any variable with real missingness (country, provstate,
 # weaptype1): its row was zeroed while its method was non-empty.
 
-# Step 1 — zero COLUMNS only for variables that must not actively predict others.
+# Step 1: 0 columns only for variables that must not actively predict others.
 # Rows are left intact so these variables can still receive imputations.
 never_predict <- c("eventid", "country", "provstate", "country_txt", "region_txt",
                    "weaptype1", "gname")
 pred_mat_cont[, never_predict] <- 0
 
-# Step 2 — set method = "" for variables that must not be imputed at all.
-# - eventid:           row identifier
-# - country_txt / region_txt: plain-text labels, redundant with their numeric factors
-# - weaptype1:         has genuine NAs but weaptype1_cat already carries this
+# Step 2: set method = "" for variables that must not be imputed at all.
+# eventid:           row identifier
+# country_txt / region_txt: plain-text labels, redundant with their numeric factors
+# weaptype1:         has genuine NAs but weaptype1_cat already carries this
 #                      information; imputing the raw code is redundant and was the
 #                      direct source of the "no covariates" error
 never_impute <- c("eventid", "country_txt", "region_txt", "weaptype1")
@@ -322,8 +327,8 @@ imp_meth_cat[c("nkill", "nwound")] <- "pmm"
 imp_meth_cat[c("nperps_cat")] <- "rf" # Polr unsuitable due to mixed weights at boundries for key predictors
 imp_meth_cat[c("country", "provstate", "gname")] <- "cart" # cart for high-cardinality factors
 
-pred_mat_cat[, vars_to_exclude] <- 0   # column zero only — same logic as Model A
-imp_meth_cat[never_impute] <- ""        # don't impute identifiers / redundant vars
+pred_mat_cat[, vars_to_exclude] <- 0   # column zero only: same logic as Model A
+imp_meth_cat[never_impute] <- ""       # don't impute identifiers / redundant vars
 
 # Production MICE: full dataset
 impute_data_cat <- gtd_clean %>% 
@@ -385,15 +390,14 @@ The term "lone wolf" was popularized in the late 1990s by white supremacists Tom
 
 There is a critical need to examine the differences in tactics and outcomes of lone wolves, however the existing data is not immediately conducive to a quantitative analysis due to 83% of recorded attacks not accurately reporting on the number of perpetrators, making a differentiation of attacks based off the number of perpetrators difficult. Analysis is further confounded by the data being Missing Not At Random (MNAR).
 
-My research evaluates the accuracy of Multiple Imputation by Chained Equations (MICE), a powerful technique that uses tailored prediction methods for every missing column per record. The outcomes of the results of MICE imputation are measured against dataset fusion and listwise deletion approaches, common methods used to improve the accuracy of predictive models. The differences between results demonstrates the implicit bias introduced through imputation and synthesis methods on data that is not missing at random.
+My research evaluates the accuracy of Multiple Imputation by Chained Equations (MICE), a powerful technique that uses tailored prediction methods for every missing column per record. The outcomes of the results of MICE imputation are measured against dataset fusion and listwise deletion approaches, common methods used to improve the accuracy of predictive models. The differences between results demonstrates the implicit bias introduced through imputation and synthesis methods on data that is not missing at random. However, MICE is most performant performing on data that is Missing at Random (MAR), as the gaps in MNAR represent confounders not accounted for in the data. This paper explores the accuracy and limitations of MICE under these adverse conditions.
 
-I sought to explore the difference in lethality, tactics, and outcomes of individuals performing attacks by themselves as compared to attacks perpetuated by multiple attackers. In producing a lens through which the impact and profile of "Lone Wolves" can be approached by counterterrorism researchers, methods of identification and risk assessment can be performed. I then examined the changes in individual-sized terrorist attacks over time, looking for developing trends in attack types, success rates, and casualties, seeking to explore the rate at which these attacks are increasing in their risk.
+I explore the difference in lethality, tactics, and outcomes of individuals performing attacks by themselves as compared to attacks perpetuated by multiple attackers. In producing a lens through which the impact and profile of "Lone Wolves" can be approached by counterterrorism researchers, methods of identification and risk assessment can be performed. I then examine the changes in individual-sized terrorist attacks over time, looking for developing trends in attack types, success rates, and casualties, seeking to explore the rate at which these attacks are increasing in their risk. This analysis is critical for understanding the source of accuracy gaps in the MICE predictor weights.
 
 Finally, I compare my results against the imputed dataset with the results from the limited data available in the GTD on individual attacks. While the scarcity of this data has historically presented difficulties in analysis, the value in comparing the difference in predictors from the imputed dataset reveals the confounders introduced by MICE, belying the high accuracy results of MICE's predictive model. Throughout this process I seek to ensure the ability for others to reproduce my results, as well as evaluate their validity by applying the Shapley Additive Explanation (SHAP) process to document the weights and reveal additional insight about lone wolf terrorism in comparison to other attack types.
 
 ```{r intro_plot}
 #| cache: true
-#| label: fig1
 #| fig-cap: "Attacks and casualties by year in Western Countries, 2000-2020"
 plot_data <- attacks_over_time %>%
   arrange(iyear) %>% 
@@ -442,15 +446,14 @@ Because terrorist attacks are inherently clandestine events often involving deli
 
 ## About the Global Terrorism Database
 
-The systematic quantification of political violence relies upon the structural integrity of longitudinal archives, among which the Global Terrorism Database (GTD) serves as the preeminent unclassified repository for researchers, policymakers, and security analysts [@Abdalsalam2024a]. Originally founded in 1970 by Pinkerton, a private intelligence firm, it has been Maintained by the National Consortium for the Study of Terrorism and Responses to Terrorism (START) since 2001. The GTD documents over 180,000 incidents since 1970, capturing more than 130 variables for contemporary events, ranging from tactical specifics to perpetrator identities and casualty metrics [@GTD2026]. The GTD has been leveraged extensively to produce insightful analysis on the relationship between terrorism, political violence, and civil unrest, with LaFree and Dugan writing several seminal works that show terrorists as rational decision makers who are affected by counterterrorism controls. Despite its breadth of coverage and the wide array of descriptive fields to perform analysis upon, the utility of the GTD is persistently challenged by the "missingness" problem: the presence of null or unknown entries in critical fields such as perpetrator group names, casualty counts, and specific weapon sub-types. These informational voids are not merely random artifacts of data entry but are often the product of systematic biases in media reporting, state-sponsored censorship, or the inherent clandestine nature of non-state actors [@wani2024review]. The GTD codebook takes a measured approach with the inclusion of a terrorist attack, choosing a pathway of preferring inclusion of an attack so long as it is not clearly disqualified, even if the record would have a relatively sparse level of populated fields.
+The systematic quantification of political violence relies upon the structural integrity of longitudinal archives, among which the Global Terrorism Database (GTD) serves as the preeminent unclassified repository for researchers, policymakers, and security analysts [@Abdalsalam2024a]. Originally founded in 1970 by Pinkerton, a private intelligence firm, it has been maintained by the National Consortium for the Study of Terrorism and Responses to Terrorism (START) since 2001. The GTD documents over 180,000 incidents since 1970, capturing more than 130 variables for contemporary events, ranging from tactical specifics to perpetrator identities and casualty metrics [@GTD2026]. The GTD has been leveraged extensively to produce insightful analysis on the relationship between terrorism, political violence, and civil unrest, with LaFree and Dugan writing several seminal works that show terrorists as rational decision makers who are affected by counterterrorism controls. Despite its breadth of coverage and the wide array of descriptive fields to perform analysis upon, the utility of the GTD is persistently challenged by the "missingness" problem: the presence of null or unknown entries in critical fields such as perpetrator group names, casualty counts, and specific weapon sub-types. These informational voids are not merely random artifacts of data entry but are often the product of systematic biases in media reporting, state-sponsored censorship, or the inherent clandestine nature of non-state actors [@wani2024review]. The GTD codebook takes a measured approach with the inclusion of a terrorist attack, choosing a pathway of preferring inclusion of an attack so long as it is not clearly disqualified, even if the record would have a relatively sparse level of populated fields.
 
 ## Analysis and Imputation against the GTD
 
-The modern frontier of data science offers a robust suite of solutions to mitigate information gaps through advanced data imputation [@Azad2025]. Traditional methods such as listwise deletion or dataset fusion introduce signficiant bias in the GTD, skewing attack types in the remaining data. This reflects the MNAR nature of the data results: Bombing attacks are more heavily represented in both the GTD and ACLED, and have a higher amount of missing perpetrator fields.
+The modern frontier of data science offers a robust suite of solutions to mitigate information gaps through advanced data imputation [@Azad2025]. Traditional methods such as listwise deletion or dataset fusion introduce significant bias in the GTD, skewing attack types in the remaining data. This reflects the MNAR nature of the data results: Bombing attacks are more heavily represented in both the GTD and ACLED, and have a higher amount of missing perpetrator fields.
 
 ```{r missingness_bias_test}
 #| cache: true
-#| label: fig2
 #| fig-cap: "Distribution of Attack Types in the Full GTD (2000–2022)"
 excluded_types <- c("Unknown", "Unarmed Assault", "Hijacking",
                     "Hostage Taking (Barricade Incident)", "Hostage Taking (Kidnapping)")
@@ -502,7 +505,7 @@ ggplot(attacktype_dist, aes(x = attacktype1_txt, y = pct, fill = dataset)) +
 
 As an alternative, the application of domain-specific Natural Language Processing (NLP) and meta-learning ensemble architectures is emerging as the gold standard for data recovery in conflict event databases. By leveraging extractive transformer models like ConfliBERT to analyze unstructured event summaries and employing Meta-Imputation Balanced (MIB) frameworks to synthesize predictions from multiple algorithmic sources, researchers have extracted contextual information by collating common attacks with synthesized data to produce models capable of highly accurately predicting group name [@Azad2025]. However, these papers and other quantitative analysis papers more interested in exploring the technical implementation and maximum efficacy of their imputation process often omit all but the largest terrorist groups, to produce groups of results that can be broadly analyzed using these contextual models [@Pan2021], focusing on groups with over 1000 documented attacks. The result is a model with a highly predictive accuracy against only a small subset of the actual records in the dataset, with impacted external validity. As an example from 2024, Abdalsalam et al documented the use of the BiGRU contextual model to identify terrorist groups with high accuracy against only terrorist groups with 500 or more documented attacks, resulting a total group size of 36 terrorist groups out of the 3,767 groups described in the full GTD dataset, raising questions on the accuracy of the approach on real-world data, particularly present data from emerging threats.
 
-Wani explores the mechanisms of missing data completely at random (MCAR), when the observed data is unevenly missing at random (MAR) and missing not at random (MNAR) in which the missingness is a result of a confounding effect [@wani2024review], as is the case in the GTD, where information collection conditions rely on public reports, with records on unsuccessful, zero-casualty attacks generally containing more missing fields. In their review of potential imputation frameworks, Wani evaluates recovery strategies such as Multiple Imputation by Chained Equations (MICE), Random Forests, and Generative Adversarial Networks. Wani advocates for task-specific evaluation metrics such as classification accuracy or measuring the precision of regression models for specific key values of the treatment variable. These more nuanced methods better describe model fit and field missingness as compared to relying solely on standard error calculations such as Root Mean Squared Error (RMSE) when NMAR data is present. In high-dimensional MNAR datasets such as the GTD, fields are left blank or intentionally flagged as unknown if there is not clear consensus, even if some potential information points toward a value. Indeed, Abdasalam notes in their 2024 article exploring the missingness of the group name field that a value being left unknown is sometimes a conscious choice, stating "This gap in research may stem from the complex and dynamic nature of terrorist groups, which frequently evolve, change names, merge, or disband, thereby complicating the creation of accurate and current classification and prediction models." [@Abdalsalam2024a]. As a measure of this approach, I include in this paper an analysis of the predictors involved in identifying individual attacks, along with a comparison of the magnitude of the predictors against un-imputed data. While MNAR data cannot be observed directly, this approach can reveal the confounding effect it introduces.
+Wani explores the mechanisms of missing data completely at random (MCAR), when the observed data is unevenly missing at random (MAR) and missing not at random (MNAR) in which the missingness is a result of a confounding effect [@wani2024review], as is the case in the GTD, where information collection conditions rely on public reports, with records on unsuccessful, zero-casualty attacks generally containing more missing fields. In their review of potential imputation frameworks, Wani evaluates recovery strategies such as Multiple Imputation by Chained Equations (MICE), Random Forests, and Generative Adversarial Networks. Wani advocates for task-specific evaluation metrics such as classification accuracy or measuring the precision of regression models for specific key values of the treatment variable. These more nuanced methods better describe model fit and field missingness as compared to relying solely on standard error calculations such as Root Mean Squared Error (RMSE) when NMAR data is present. In high-dimensional MNAR datasets such as the GTD, fields are left blank or intentionally flagged as unknown if there is not clear consensus, even if some potential information points toward a value. Indeed, Abdalsalam notes in their 2024 article exploring the missingness of the group name field that a value being left unknown is sometimes a conscious choice, stating "This gap in research may stem from the complex and dynamic nature of terrorist groups, which frequently evolve, change names, merge, or disband, thereby complicating the creation of accurate and current classification and prediction models." [@Abdalsalam2024a]. As a measure of this approach, I include in this paper an analysis of the predictors involved in identifying individual attacks, along with a comparison of the magnitude of the predictors against un-imputed data. While MNAR data cannot be observed directly, this approach can reveal the confounding effect it introduces.
 
 Reductions in the analyzed dataset have also prevailed to produce statistically significant predictions at the cost of the ability of the results to be interpreted against excluded or newly-added data. Abdalsalam has had success with highly predictive contextual prediction models such as DistilBERT [@Abdalsalam2021a] or extractive text classifiers such as word2vec [@Abdalsalam2024], resulting in models capable of identifying attack type or location with a high degree of accuracy, although the research did exclude about 73% of the dataset to missing or insufficiently long descriptions. This exposes the limitations of predicting a 'freeform' field such as group name using a statistical model without a limited Retrieval Augmented Generation (RAG) ability to narrow the search space of the contextual model. The limitation of these approaches is the significant setup time and the reliance on externally-available related sources. Using prepared media libraries or archives of social media records can provide critical context, but also introduces significant setup and configuration steps, as well as mandating extensive comparison testing to determine the accuracy (or bias, if improperly configured) granted by the RAG.
 
@@ -520,7 +523,7 @@ Additional imputation methods used to analyze other datasets are described in Ap
 
 High-quality, varied data is the often-sought, rarely-acquired state for quantitative analysis. Imputing rows within the GTD is no exception, and I sought a method that would allow analysts to infer and predict multiple fields simultaneously. As a result, MICE is a natural candidate as compared to more advanced methods that are tailored to impute only a single variable at a time.
 
-## Data Preperation
+## Data Preparation
 
 In the case of the GTD, the relationships between attack types and number of perpetrators aren't represented similarly prior to the year 2000. As a result I reduced the records of the GTD dataset for my analysis to only records from 2000 to 2020. The records with a large number of perpetrators  and I also excluded records with 50 or more perpetrators, as these records heavily skew the data. For example, the proportion of armed assaults are 29% higher than the average across all attacks, and bombings perpetrated by very large groups occur 37.5% less. I also combined the weapon type listings into a reduced number of categories, as the extreme under-representation of certain weapon types such as radiological attacks cause imputation methods to fail due to quasi-complete separation.
 
@@ -530,7 +533,6 @@ Examining the GTD data and existing research, I identified that the GTD data spa
 
 ```{r missingness_plot}
 #| cache: true
-#| label: fig3
 #| fig-cap: "Missing Data Percentages across GTD and ACLED Datasets"
 #| fig-width: 12
 #| fig-height: 4
@@ -601,7 +603,7 @@ p_acled <- ggplot(plot_data_acled, aes(x = Missing_Pct, y = reorder(clean_name, 
   scale_x_continuous(limits = c(0, 100), expand = expansion(mult = c(0, 0.4))) +
   labs(
     title = "ACLED: Missing Data by Column",
-    subtitle = "Includes NA and 'Unidentified'", # Adjusted to reflect your ACLED data logic
+    subtitle = "Includes NA and 'Unidentified'",
     x = "Missing Percentage (%)",
     y = NULL
   ) +
@@ -618,15 +620,14 @@ p_acled <- ggplot(plot_data_acled, aes(x = Missing_Pct, y = reorder(clean_name, 
 p_gtd + p_acled
 ```
 
-I also assumed that attacks marked as suicide attacks in the GTD involved at least one perpetrator: The number of perpetrators must at least be nonzero in this case. I also restricted the variables used in my imputation model to primary attack type (attacktype1), primary weapon type (weaptype1), primary target (targtype1), and the broader region and country variables. I did not restrict my model to a specific time or country bounds, in the hopes that the resulting model would retain its validity independent of longitudinal or location confounding effects.
+I also assumed that attacks marked as suicide attacks in the GTD involved at least one perpetrator: The number of perpetrators must at least be nonzero in this case. I also restricted the variables used in my imputation model to primary attack type, primary weapon type, primary target, and the broader region and country variables. I did not restrict my model to a specific time or country bounds, in the hopes that the resulting model would retain its validity independent of longitudinal or location confounding effects.
 
 ## Refining imputation functions for simultaneous imputation
 
-The high degree of missing fields reflects a strategy by the GTD researchers at START to only include data they can establish with absolute certainty [@GTD2007introducing]. As a result, while information on attackers and outcomes might be fairly robust, if the accounts of an attack only refer to "a handful of attackers" or "an unknown assailant," it is likely that the number of perpetrators would be left blank. I found that for the purposes of statistical analysis of outcomes, defining the exact number of actors is not explicitly required to produce accurate conclusions. Rather, establishing broader categories of Individual, Small Group (2-5 attackers) and Large Group (>5) would be sufficient to convert the number of perpetrators into a categorical factor which could be used for imputation and prediction. In this way, the accuracy and specificity of the imputation model is greatly increased, without compromising the field for analysis purposes. This is because many of the other variables in the GTD are themselves categorical, and as such building predictive models that determine the difference in each additional perpetrator on attack type or group name is not necessarily impactful as compared to analzying the differences in tactics of individuals and groups, which behave very differently.
+The high degree of missing fields reflects a strategy by the GTD researchers at START to only include data they can establish with absolute certainty [@GTD2007introducing]. As a result, while information on attackers and outcomes might be fairly robust, if the accounts of an attack only refer to "a handful of attackers" or "an unknown assailant," it is likely that the number of perpetrators would be left blank. I found that for the purposes of statistical analysis of outcomes, defining the exact number of actors is not explicitly required to produce accurate conclusions. Rather, establishing broader categories of Individual, Small Group (2-5 attackers) and Large Group (>5) would be sufficient to convert the number of perpetrators into a categorical factor which could be used for imputation and prediction. In this way, the accuracy and specificity of the imputation model is greatly increased, without compromising the field for analysis purposes. This is because many of the other variables in the GTD are themselves categorical, and as such building predictive models that determine the difference in each additional perpetrator on attack type or group name is not necessarily impactful as compared to analyzing the differences in tactics of individuals and groups, which behave very differently.
 
 ```{r attack_types_by_nperps_cat}
 #| cache: true
-#| label: fig4
 #| fig-cap: "Differences in attack types and number of perpetrators"
 #| fig-width: 12
 #| fig-height: 4
@@ -702,19 +703,19 @@ ggplot(attacktype_combined, aes(x = attacktype1_txt, y = pct, fill = nperps_cat)
   )
 ```
 
-After ensuring that my training and test data contained a sufficient proportion of each level of perpetrators, I conducted a dry run to establish the imputation method for each variable being imputed. For continuous variables, I used predictive mean matching, which produces a predictive model based off a pool of observed values which most closely match the prediction for the missing case. Random selections are drawn from the pool for each missing field per row. This has the advantage of only selecting potentially plausible values, such as only predicting whole numbers when evaluating the number of attackers. '
+After ensuring that my training and test data contained a sufficient proportion of each level of perpetrators, I conducted a dry run to establish the imputation method for each variable being imputed. For continuous variables, I used predictive mean matching, which produces a predictive model based off a pool of observed values which most closely match the prediction for the missing case. Random selections are drawn from the pool for each missing field per row. This has the advantage of only selecting potentially plausible values, such as only predicting whole numbers when evaluating the number of attackers.
 
 For variables that have a high degree of impact on the outcome of a record, but also have a high degree of cardinality such as group name, country, and state/province, I applied a Classification and Regression tree (CART) function. CART operates by building decision trees to recursively partition predictors into pools of similar results, and then builds a tree based off the other low-cardinality predictors (year, region, attack type, weapon type) to sort the records. This sidesteps the dimensionality problem exemplified by random forest entirely by using the predictor space to find similar records, then sampling from their observed values. Like PMM, the imputed value is always a real observed group name, never a nonsensical interpolation.
 
-For the ordered categorical factor I produced grouping the number of perpetrators, I examined the use of a Proportional Odds Logistic Regression (POLR) function. POLR is an extension of binary logistic regression for ordered categorical outcomes. Rather than modeling a single binary boundary, it models K-1 cumulative boundaries simultaneously, one for each transition between adjacent levels, weighing the proportional odds of the predictors at each boundary level. This method does come with a hazard as it establishes the same predictive effect as each boundary is crossed. For instance, 80% of suicide attacks in the GTD involve only a single perpetrator, making this a highly impactful predictor, and of the remainder, only half as many large group attacks were suicide attacks as compared to small groups. With the predictor effect of suicide attacks varying strongly across groups. In my evaluation of the number of perpetrators against the GTD, the difference in predictors between categories (see figure 4) resulted in a strong bias and a 17% reduction in predictive accuracy for the individual category, with accuracy improving by group size. This was a counter-intuitive finding given the low predictive power of incremental changes in the predictors on the number of perpetrators. This was confirmed by running a 
+For the ordered categorical factor I produced grouping the number of perpetrators, I examined the use of a Proportional Odds Logistic Regression (POLR) function. POLR is an extension of binary logistic regression for ordered categorical outcomes. Rather than modeling a single binary boundary, it models K-1 cumulative boundaries simultaneously, one for each transition between adjacent levels, weighing the proportional odds of the predictors at each boundary level. This method does come with a hazard as it establishes the same predictive effect as each boundary is crossed. For instance, 80% of suicide attacks in the GTD involve only a single perpetrator, making this a highly impactful predictor, and of the remainder, only half as many large group attacks were suicide attacks as compared to small groups. With the predictor effect of suicide attacks varying strongly across groups. In my evaluation of the number of perpetrators against the GTD, the difference in predictors between categories (see figure 4) resulted in a strong bias and a 17% reduction in specificity for the individual category, with accuracy improving by group size. This was a counter-intuitive finding given the low predictive power of incremental changes in the predictors on the number of perpetrators.
 
-For all other variables being imputed, I used a random forest model. Random Forest's suitability as the default imputation method in MICE pipelines stems from its flexibility and robustness as a non-parametric learner. Unlike parametric methods such as POLR or linear regression, Random Forest imposes no assumptions about the underlying distribution or functional form of relationships in the data, instead discovering structure empirically through recursive partitioning. This allows it to capture complex interactions and non-linear relationships between predictors — such as the interplay between region, attack type, and year in determining perpetrator counts that parametric methods would miss or misrepresent. Its native handling of mixed data types eliminates the need for manual preprocessing or dummy coding of categorical variables, and its ensemble aggregation naturally dampens the influence of irrelevant predictors, since uninformative variables are selected at splits only by chance and contribute little to the final predictions. Together these properties make Random Forest a robust, largely assumption-free default that can be applied broadly across the heterogeneous predictor space of a dataset like the GTD without requiring variable-by-variable method tuning.
+For all other variables being imputed, I used a random forest model. Random Forest's suitability as the default imputation method in MICE pipelines stems from its flexibility and robustness as a non-parametric learner. Unlike parametric methods such as POLR or linear regression, Random Forest imposes no assumptions about the underlying distribution or functional form of relationships in the data, instead discovering structure empirically through recursive partitioning. This allows it to capture complex interactions and non-linear relationships between predictors, such as the interplay between region, attack type, and year in determining perpetrator counts that parametric methods would miss or misrepresent. Its native handling of mixed data types eliminates the need for manual preprocessing or dummy coding of categorical variables, and its ensemble aggregation naturally dampens the influence of irrelevant predictors, since uninformative variables are selected at splits only by chance and contribute little to the final predictions. Together these properties make Random Forest a robust, largely assumption-free default that can be applied broadly across the heterogeneous predictor space of a dataset like the GTD without requiring variable-by-variable method tuning.
 
-## Exlusion of predictors and imputed fields
+## Exclusion of predictors and imputed fields
 
-It is also critical to ensure the MICE imputation process avoids using some variables as predictors that would be highly colinear in a regression model (such as the event id) or too closely related to another value, such as including on both country code and country name. Other values such as weapon type were excluded due to a large proportion of dissimilar categories which simultaneously have very few records. My testing revealed multiple weapon types which caused MICE to inflict ridge penalties in the row prediction due to a lack of covariates for the imputation functions to pull records upon, and binning weapon types across dissimilar categories was impractical.
+It is also critical to ensure the MICE imputation process avoids using some variables as predictors that would be highly collinear in a regression model (such as the event id) or too closely related to another value, such as including on both country code and country name. Other values such as weapon type were excluded due to a large proportion of dissimilar categories which simultaneously have very few records. My testing revealed multiple weapon types which caused MICE to inflict ridge penalties in the row prediction due to a lack of covariates for the imputation functions to pull records upon, and binning weapon types across dissimilar categories was impractical.
 
-## Computational resources and Performance
+## Computational resources and performance
 
 My final collection of imputation runs were performed on a personal computer with 8 CPU cores and 32 GB of RAM. Predicting the continuous number of perpetrators value required 8 rounds of 20 iterations each, while predicting the grouped number of perpetrators only required 8 rounds of 10 iterations. The number of rounds leveraged the use of running each round of iterations in parallel to leverage each CPU core (in groups of 4 rounds), improving the runtime from 2 days per imputation run when run serially to roughly 5 hours per model when run in parallel. 
 
@@ -722,13 +723,12 @@ The iteration values were determined by an evaluation of the convergence between
 
 ```{r mice_convergance_plots, include=TRUE}
 #| cache: true
-#| label: fig5
 #| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 6
 #| fig-height: 3
-#| fig-cap: "Convergance Trace Plot comparison of MICE imputation models"
+#| fig-cap: "Convergence Trace Plot comparison of MICE imputation models"
 #| fig-align: "center"
 
 # Helper: extract mean and SD per iteration per chain from a mids object
@@ -768,17 +768,17 @@ plot_trace <- function(trace_df, title) {
     theme(
       plot.title    = element_text(hjust = 0.5, face = "bold", size = 9),
       strip.text    = element_text(face = "bold"),
-      legend.position = "bottom"
+      legend.position = "none"
     )
 }
 
 p_cont <- plot_trace(trace_cont, "Model A: Continuous (nperps)")
 p_cat  <- plot_trace(trace_cat,  "Model B: Categorical (nperps_cat)")
 
-p_cont + p_cat + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+p_cont + p_cat
 ```
 
-After training, I generated a confusion matrix against the unimputed data for comparison purposes. The results of the MICE model reflect a relatively high degree of accuracy in predicting if an attack was perpetrated by an individual (90.7%), with decreasing performance for the small and large group categories. I then applied logistic regression against my imputed results to examine the differences in outcomes and tactics, if any, between attacks by individuals and groups. I determined that while individuals and groups have similar outcomes when the same attack and weapon types are considered, individual terrorist attackers are far more likely to employ vehicles and to commit suicide attacks. Region and Target Type were not strong predictors on their own, although comparisons within the region category show an increased probability of single actor terrorism in the Levant in comparison to Asia, where terrorist attacks involve more actors working in groups. Radiological weapons were among a handful of weapon types that needed to be excluded from the logistic regression visualization due to quasi-complete separation caused by insufficient event frequency.
+After training, I generated a confusion matrix against the unimputed data for comparison purposes. The results of the MICE model reflect a relatively high degree of specificity in predicting if an attack was perpetrated by an individual (90.7%), with decreasing performance for the small and large group categories. I then applied logistic regression against my imputed results to examine the differences in outcomes and tactics, if any, between attacks by individuals and groups. I determined that while individuals and groups have similar outcomes when the same attack and weapon types are considered, individual terrorist attackers are far more likely to employ vehicles and to commit suicide attacks. Region and Target Type were not strong predictors on their own, although comparisons within the region category show an increased probability of single actor terrorism in the Levant in comparison to Asia, where terrorist attacks involve more actors working in groups. Radiological weapons were among a handful of weapon types that needed to be excluded from the logistic regression visualization due to quasi-complete separation caused by insufficient event frequency.
 
 ```{r mice_accuracy, include=FALSE}
 #| cache: true
@@ -788,7 +788,7 @@ After training, I generated a confusion matrix against the unimputed data for co
 # Evaluation datasets mask test-row nperps/nperps_cat to NA while leaving
 # training rows and originally-missing rows untouched. This faithfully simulates
 # production: MICE only has access to training-row observations when imputing
-# test rows — no leakage from test-row true values.
+# test rows: no leakage from test-row true values.
 # m and maxit match the production run (10 / 20) so metrics reflect actual
 # model quality. Predictions are pooled across all 5 imputations before
 # evaluation rather than drawn from a single imputed dataset.
@@ -814,7 +814,7 @@ true_categories <- factor(truth_lookup$nperps_cat,
 eval_data_cont <- gtd_clean %>%
   dplyr::select(all_of(base_vars), nperps) %>%
   mutate(across(all_of(factor_vars), as.factor)) %>%
-  # Mask test rows only — training-row values remain visible to MICE
+  # Mask test rows only: training-row values remain visible to MICE
   mutate(nperps = if_else(eventid %in% test_ids, NA_real_, nperps))
 
 progressr::handlers("txtprogressbar")
@@ -891,10 +891,9 @@ imputed_cat_from_cat <- bind_rows(
   factor(levels = c("Lone Wolf", "Small Cell", "Large Group"))
 ```
 
-```{r conf_table}
+```{r tbl-conf_table}
 #| cache: true
-#| label: fig6
-#| fig-cap: "Performance Metrics of MICE Imputation by Category"
+#| tbl-cap: "Performance Metrics of MICE Imputation by Category"
 # Generate both Confusion Matrices
 conf_matrix_cont <- confusionMatrix(data = imputed_cat_from_cont, reference = true_categories)
 conf_matrix_cat <- confusionMatrix(data = imputed_cat_from_cat, reference = true_categories)
@@ -920,7 +919,6 @@ metrics_wide <- metrics_cont %>%
 # Generate the table
 metrics_wide %>%
   kbl(
-    caption = "Performance Metrics: Predicting from Continuous Data vs Binned Categories",
     booktabs = TRUE,
     digits = 3,
     align = c("l", "c", "c", "c", "c"),
@@ -930,9 +928,14 @@ metrics_wide %>%
   add_header_above(c(" " = 1, "Continuous Data" = 2, "Binned Categories" = 2))
 ```
 
+The most pronounced disparity in the confusion matrix is in the Large Group category, where both models achieve sensitivity near 36% against specificity near 87%. This gap is a direct product of severe class imbalance in the observed training data. Lone Wolf cases within the time bounds of the GTD being sampled account for roughly 65% of observed records, and the stratified split preserves that ratio into the test set. In a three-class ordinal problem with that distribution, MICE's random forest models learn a decision surface that is heavily rewarded for calling ambiguous cases Lone Wolf or Small Cell, the classes that dominate training signal, and are rarely penalized for misclassifying the minority Large Group. High specificity for Large Group (87.7%) follows automatically: since the model seldom predicts "Large Group" at all, it rarely does so incorrectly, but it simultaneously misses most of the true Large Group cases. The Lone Wolf and Small Cell categories show a smaller gap because the model has enough training mass to form a reasonable boundary, though Small Cell sensitivity (~50%) reveals that the 2–5 perpetrator window is too narrow to be well-separated from the adjacent categories by the available predictors.
+
+There is also a structural weakness in the comparison between imputation sets. The test set ground truth is drawn exclusively from the rows where the number of perpetrators was observed in the GTD, but the MNAR nature of the data is biased to under-report small groups and individuals. Large, organized attacks with clear group attribution are over-represented in the observed subset relative to their true prevalence, precisely because they are easier to verify and report. Evaluating MICE predictions against this biased observed slice means the confusion matrix is measuring agreement with a non-random reference distribution, not performance against the true population. A model that performed perfectly on the actual population of all attacks, including the 83% with missing perpetrator counts would still score poorly on this confusion matrix if it correctly recovered the true proportion of lone wolf attacks that listwise deletion had been suppressing. The sensitivity-specificity gap is therefore partly a measurement artifact of evaluating an MNAR imputation model using the same selection mechanism that created the missingness.
+
+Several options exist to narrow the gap, with different cost-accuracy tradeoffs. The most tractable is class-weighted training: passing class-weight arguments to the random forest imputation method in mice() to upweight Small Cell and Large Group cases, shifting the decision boundary toward better recall of the minority classes at some cost to Lone Wolf precision. A second option is to replace hard binning thresholds with soft pooling, rather than rounding the per-row average of eight continuous imputations and applying fixed cutpoints at 1 and 5, computing the per-class predicted probability across imputations and then adjusting decision thresholds via Youden's J statistic per class would better handle the uncertainty concentrated near the 1/2 and 5/6 perpetrator boundaries. A more fundamental improvement would be to construct a synthetic MAR validation set by randomly masking a held-out subset of observed nperps values before training and evaluating against those masked rows, removing the MNAR selection bias from the evaluation entirely and giving a cleaner estimate of true imputation accuracy that is not confounded by the same reporting mechanism that generated the missingness.
+
 ```{r conf_plot, include=FALSE}
 #| cache: true
-#| label: fig7
 #| fig-cap: "Confusion Matrix for Imputed Categories"
 cm_df <- as.data.frame(conf_matrix_cat$table)
 ggplot(cm_df, aes(x = Reference, y = Prediction, fill = Freq)) +
@@ -1077,9 +1080,9 @@ zero_model_ors <- zero_model_results %>%
          conf.high_or = exp(conf.high))
 ```
 
-```{r colinear, include=FALSE}
+```{r collinear, include=FALSE}
 # Extract one dataset to test
-test_data <- complete(mice_cat_results, 1)
+test_data <- mice::complete(mice_cat_results, 1)
 
 # Run a dummy model to check for collinearity
 dummy_model <- glm(nkill ~ nperps_cat + region + attacktype1 + weaptype1, data = test_data)
@@ -1122,7 +1125,7 @@ theta_nb <- plot_nb$theta
 expected_freq_nb <- sapply(0:plot_limit, function(i)
   sum(dnbinom(i, mu = mu_nb, size = theta_nb)))
 
-# ZINB expected frequencies from raw missing data — manual component decomposition
+# ZINB expected frequencies from raw missing data: manual component decomposition
 # avoids broken predict(type = "prob") and correctly applies ZINB probability mass
 mu_zinb    <- predict(plot_zinb, type = "count")
 pi_zinb    <- predict(plot_zinb, type = "zero")
@@ -1174,13 +1177,12 @@ build_rootogram <- function(data, title) {
 
 ```{r rootogram_plot_6, include=TRUE}
 #| cache: true
-#| label: fig9
 #| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 6
 #| fig-height: 3
-#| fig-cap: "Rootogram Display of the predicitve over or underfit of the model on the number of casualties from the continuous imputed dataset"
+#| fig-cap: "Rootogram Display of the predictive over or underfit of the model on the number of casualties from the continuous imputed dataset"
 #| fig-align: "center"
 # Create both plots
 plot1 <- build_rootogram(df_nb, "Standard Negative\nBinomial model")
@@ -1188,12 +1190,12 @@ plot2 <- build_rootogram(df_zinb, "Zero-Inflated\nNegative Binomial")
 plot1 | plot2
 ```
 
-A rootogram of the imputed and un-imputed datasets was generated with a negative binomial model, and compared to a rootogram of the unimputed data. Because the unimputed data has a very high level of missignness, I employed a Zero-Inflated Negative Binomial in an attempt to fit the data while accounting for the missing values. This handles the dispersion of the variables well, and the results indicate that the predictive power between the imputed data with a standard negative binomial model and the unimputed data with a zero-inflated negative binomial exhibit similar (but not identical) characteristics. This leads me to conclude that the model weights used for data imputation reveal trends in the data that expose the MNAR confounding effect. For instance, suicide attacks are significantly more likely to be perpetrated by a single individual, and attacks against abortion clinics and religious figures also lean towards being perpetrated by individuals. If future attacks were seeking attribution or being investigated, the weights here provide a starting reference point.
+A rootogram of the imputed and un-imputed datasets was generated with a negative binomial model, and compared to a rootogram of the unimputed data. Because the unimputed data has a very high level of missigness, I employed a Zero-Inflated Negative Binomial in an attempt to fit the data while accounting for the missing values. This handles the dispersion of the variables well, and the results indicate that the predictive power between the imputed data with a standard negative binomial model and the unimputed data with a zero-inflated negative binomial exhibit similar (but not identical) characteristics. This leads me to conclude that the model weights used for data imputation reveal trends in the data that expose the MNAR confounding effect. For instance, suicide attacks are significantly more likely to be perpetrated by a single individual, and attacks against abortion clinics and religious figures also lean towards being perpetrated by individuals. If future attacks were seeking attribution or being investigated, the weights here provide a starting reference point.
 
+Plotting the weights, the hazard of imputing upon weapon type become more clear. with a large collection of weapon type codes in the GTD codebook, a number of weapon types have only a handful of attacks. The near-complete model separation of these weapon types forces a choice of combining similar types into a collection sufficient to generate varied data, or dropping them entirely from consideration. Further, the pooling function used to satisfy Rubin's rules as part of MICEs collection algorithm adds between-imputation variance on top of the within-imputation variance being introduced by the Random Forest and Parametric functions employed. Combined with the low number of populated perpetrator information, the result is a significant sensitivity penalty and greater standard error.
 
 ```{r mice_results_plot, include = TRUE}
 #| cache: true
-#| label: fig8
 #| fig-cap: "Predictors of Independent Actor (Lone Wolf) Terrorism"
 #| fig-width: 12
 #| fig-height: 10
@@ -1303,7 +1305,7 @@ forest_plot_quad <- ggplot(plot_data,
                                  "Model B: Categorical (POLR)"    = "#E74C3C")) +
   labs(
     title = "Predictors of Independent Actor (Lone Wolf) Terrorism",
-    subtitle = "Odds Ratios with 95% Confidence Intervals (Pooled from MICE)",
+    subtitle = "Odds Ratios with 95% Confidence Intervals (Pooled from MICE Imputations)",
     x = "Odds Ratio (Log Scale)",
     y = "",
     color = NULL
@@ -1321,6 +1323,68 @@ forest_plot_quad
 ```
 
 As MICE is primarily designed for MAR data and the missing fields are assuredly MNAR, I sought to examine if the imputation results would hold under this conditions. A tipping-point analysis against the suicide flag, a highly related predictor of if the number of perpetrators, held up until a delta of 2. This indicates that with careful treatment and preparation of variables, the imputation process holds potential even for highly missing fields.
+
+The attacks and methods employed by terrorists have evolved considerably over time, and this change in tactics makes including the year in prediction criterion essential. Evaluating the variance in attack methods over time indicates that the relatively flat rate of assassination and infrastructure attacks is contrasted by a spike in bombings and assaults in the 2010s. 
+
+```{r attacks_over_time, include=TRUE}
+#| cache: true
+#| fig-cap: "Attack Type Trends Over Time (MICE Model A Imputed Data, 2000–2021)"
+
+excluded_types_time <- c("Unknown", "Unarmed Assault", "Hijacking",
+                         "Hostage Taking (Barricade Incident)", "Hostage Taking (Kidnapping)")
+
+attacks_time_data <- complete(mice_cont_results, action = "long") %>%
+  left_join(gtd_clean %>% dplyr::select(eventid, attacktype1_txt), by = "eventid") %>%
+  filter(!is.na(attacktype1_txt), !attacktype1_txt %in% excluded_types_time) %>%
+  group_by(.imp, iyear, attacktype1_txt) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(iyear, attacktype1_txt) %>%
+  summarise(n = mean(n), .groups = "drop")
+
+ggplot(attacks_time_data, aes(x = iyear, y = n, color = attacktype1_txt, group = attacktype1_txt)) +
+  geom_line() +
+  geom_point(size = 1.5) +
+  scale_color_manual(values = c(
+    "Bombing/Explosion"              = "steelblue",
+    "Armed Assault"                  = "tomato",
+    "Assassination"                  = "forestgreen",
+    "Facility/Infrastructure Attack" = "darkorange"
+  )) +
+  scale_x_continuous(breaks = seq(2000, 2021, by = 3)) +
+  labs(
+    x = NULL,
+    y = "Number of Attacks",
+    title = "Attack Type Trends Over Time\n(MICE Model A Imputed Data, 2000–2021)",
+    color = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(hjust = 0)
+  )
+```
+
+# Conclusion
+
+This research demonstrates that Multiple Imputation by Chained Equations can recover substantively meaningful perpetrator group classifications from a dataset in which 83% of perpetrator count records are missing, provided the imputation pipeline is carefully designed around the structure of the missingness. Formal testing confirmed that the GTD's perpetrators data is Missing Not At Random: the probability of missingness is highest precisely when the true perpetrator count is smallest, because lone wolf and small cell attacks are the hardest to confirm from independent sources at the time of coding. Despite this unfavorable missingness mechanism, the continuous imputation model (Model A) achieved 90.7% sensitivity in correctly classifying lone wolf attacks after binning imputed perpetrator counts into the three-category scheme, with decreasing but still interpretable performance across the Small Cell and Large Group categories. A tipping-point sensitivity analysis further demonstrated that the key predictor relationships held even when all imputed perpetrator counts were shifted upward by two, the most pessimistic plausible deviation from the MAR assumption. This confirms that the primary conclusions are robust to the NMAR bias that listwise deletion or naive imputation would have introduced.
+
+The logistic regression results pooled across imputed datasets reveal that individual and group attackers differ more in their choice of method than in their ultimate outcomes. When attack type and weapon type are held constant, lone wolf and group attacks produce comparable casualty distributions. However, non-parametric testing of unadjusted casualty counts identified a highly significant distributional difference between lone wolves and multi-perpetrator attacks (H(2) = 1210.5, p < 0.001), with a notable threshold effect: Small Cell and Large Group attacks were statistically indistinguishable from one another (p = 0.53), suggesting that introducing even a minimal network of two to five actors fundamentally shifts the lethality profile of an attack to match that of large organized groups. Tactically, lone wolf attackers are disproportionately likely to employ vehicles and to commit suicide attacks, while region and target type were weak standalone predictors, with the exception of the Levant, which exhibited elevated individual-actor probability relative to Asia where group-based attacks predominate.
+
+These findings carry practical implications for both counterterrorism risk assessment and for the broader methodological literature on imputation in conflict databases. The comparison between the attack type distributions of the full GTD, the listwise deletion subset, and the GTD-ACLED shared event set illustrates how conventional data reduction strategies systematically distort the apparent prevalence of bombing and armed assault relative to other attack types, a bias that compounds when downstream models treat the reduced dataset as representative. By contrast, MICE with method selection tailored to each variable's distribution and cardinality produced a recoverable signal from a field that prior quantitative analyses have largely discarded. Future work should explore whether the emerging ensemble-based meta-imputation frameworks can further reduce the residual NMAR bias, particularly those that incorporate missingness indicator variables directly into the imputation model.
+
+\clearpage
+
+# Appendix 1: Imputation methods against other datasets
+
+In the tangential field of Biomedical data, Azad has shown the promise of ensemble-based methods that combine contextual models with ensemble models to produce balanced approaches that adjust weights of predictors across multiple missing fields [@Azad2025]. This approach may allow analysts to bridge the gap between records where generating a RAG of applicable context (such as English language news articles for models that are training against English language data) is not available.
+
+Accounting for the level of missingness using a mask indicator is also useful to identify patterns in NMAR datasets. Using this method, Perez-Lebel benchmarked imputation approaches on healthcare databases and found that tree-based models utilizing Missing Incorporated in Attributes (MIA) provide the best balance of accuracy and speed [@PerezLebel2022]. When data is weakly correlated, a Ranked k-Nearest Neighbors (RkNN) can perform well. @Khan2024 introduces the RkNN algorithm to refine traditional kNN imputation. By utilizing Ranked Set Sampling, this algorithm better handles data variability and reduces error when variables are weakly correlated or lack sufficient nearby neighbors.
+
+Extensive research has been performed leveraging ensemble frameworks to reduce variance and improve prediction accuracy. @Aleryani2020 proposed Multiple Imputation Ensembles (MIE), a system where multiple imputation techniques and ensemble methods collaborate to produce a superior final prediction when data is Missing Completely At Random. @Azad2025 detailed the Meta-Imputation Balanced (MIB) framework, which trains a supervised meta-model on synthetically masked data to intelligently weigh the outputs of multiple base imputers. These methods are automated, powerful tools, which trade computational performance for accuracy. A key advantage is the ability for the models to seek and identify statistically significant fields on their own, although this can also be a hazard when collinear variables or keys are included for contention, reducing the external validity of the model to impute new data.
+
+The authors above have all successfully used ensemble-based models of various flavors to produce highly accurate predictive models. However, maintaining accuracy and reproducibility of the model for new datasets is also critical. Štrumbelj and Kononenko discuss the process of evaluating the impact of ensemble models in the final product by adapting the Shapley value. The authors quantify the "fair" contribution of each feature value to a specific classification outcome, effectively revealing how much each variable influences a model's decision. To resolve the exponential time complexity typically associated with these calculations, the paper proposes a sampling-based approximation method that makes the technique computationally feasible for complex datasets [@JMLR:v11:strumbelj10a].
+
+Another option for field synthesis is the use of additional data sources connected without the direct tie between two fields. @Cai2025 developed a sophisticated AI-driven tool called FAME (Fingerprint to Article Matching for Events) to systematically track how global media outlets report on natural disasters and terrorist attacks. By utilizing a "fingerprint" constructed from a specific combination of event class, location, and date, the system filters millions of multilingual articles to identify those covering specific crises without the need for manual training data. This methodology reveals that news coverage is heavily biased toward wealthier nations and those with significant trade ties, often requiring much higher death tolls in poorer regions to receive equivalent attention. Ultimately, this work provides an open-source framework for computational social science to measure and understand the systemic factors that shape the global news agenda.
 
 ```{r missingness_exploration, include=FALSE}
 #| cache: true
@@ -1356,7 +1420,7 @@ fluxplot(gtd_clean %>% dplyr::select(nperps, nkill, nwound, attacktype1,
 
 ```{r cat_bin_test, include=FALSE}
 #| cache: true
-# Subset to observed rows, artificially mask 30% (your test_ids), compare
+# Subset to observed rows, artificially mask 30%, compare
 obs_data <- gtd_clean %>%
   filter(!is.na(nperps)) %>%
   dplyr::select(nperps_cat, attacktype1, weaptype1_cat, targtype1, region, 
@@ -1365,7 +1429,7 @@ obs_data <- gtd_clean %>%
 
 mf_result <- missForest(obs_data, maxiter = 10, ntree = 100,
                          variablewise = TRUE)  # per-variable OOB error
-mf_result$OOBerror   # PFC for nperps_cat — directly comparable to confusion matrix
+mf_result$OOBerror   # PFC for nperps_cat: directly comparable to confusion matrix
 ```
 
 ```{r brier_score_decomposition, include=FALSE}
@@ -1419,7 +1483,7 @@ mice::md.pattern(gtd_clean %>%
   dplyr::select(nperps, nkill, nwound, gname, attacktype1, region),
   rotate.names = TRUE)
 
-# Pattern analysis with md.pattern() shows you the joint missingness structure across variables. For nperps specifically, patterns where nkill is also missing at the same time suggest the event was poorly documented overall — consistent with a structural MAR mechanism (low-documentation events → everything missing). Patterns where nkill is observed but nperps is not are more consistent with MNAR (the attack was observed, but the perpetrator count was deliberately withheld or unknowable):
+# Pattern analysis with md.pattern() shows you the joint missingness structure across variables. For nperps specifically, patterns where nkill is also missing at the same time suggest the event was poorly documented overall: consistent with a structural MAR mechanism (low-documentation events → everything missing). Patterns where nkill is observed but nperps is not are more consistent with MNAR (the attack was observed, but the perpetrator count was deliberately withheld or unknowable):
 ```
 
 ```{r variable_importance_over_time, include=FALSE}
@@ -1434,7 +1498,7 @@ miss_rf <- ranger(
 
 sort(importance(miss_rf), decreasing = TRUE)
 
-#Random forest variable importance on the missingness indicator extends the logistic regression approach above and captures nonlinear interactions. A high importance for iyear here would suggest the missingness mechanism has shifted over time — plausible if reporting practices improved, or if the composition of attacks changed toward more clandestine perpetrators:
+#Random forest variable importance on the missingness indicator extends the logistic regression approach above and captures nonlinear interactions. A high importance for iyear here would suggest the missingness mechanism has shifted over time: plausible if reporting practices improved, or if the composition of attacks changed toward more clandestine perpetrators:
 ```
 
 ```{r covariate_distributions_observed_missing, include=FALSE}
@@ -1466,8 +1530,7 @@ gtd_clean <- gtd_clean %>%
     )
   )
 
-# Test whether documentation quality predicts nperps missingness
-#   above and beyond your existing covariates
+# Test whether documentation quality predicts nperps missingness is above and beyond existing covariates
 full_model <- glm(is.na(nperps) ~ attacktype1 + weaptype1_cat + targtype1 +
                     region + iyear + suicide + nkill + nwound + doc_quality,
                   data = gtd_clean, family = binomial)
@@ -1476,34 +1539,12 @@ restricted_model <- glm(is.na(nperps) ~ attacktype1 + weaptype1_cat + targtype1 
                           region + iyear + suicide + nkill + nwound,
                         data = gtd_clean, family = binomial)
 
-lrtest(restricted_model, full_model)  # from lmtest, already in your setup
+lrtest(restricted_model, full_model)
 
 # The GTD codebook provides it directly: perpetrator counts are only recorded when they can be confirmed from multiple independent sources. This means:
 #Large organised group attacks (bombings by named groups, coordinated assaults) generate claims of responsibility, survivor accounts, security footage, and press coverage: the count gets recorded.
 # Lone-wolf and small-cell attacks are frequently committed by individuals who are killed, flee, or are identified only after investigation: at the time of coding, the count is genuinely unknown and is left blank.
-# This is a textbook MNAR mechanism: P(nperps is missing) is highest precisely when nperps is small, because small attacks are the hardest to confirm. The missing value predicts its own missingness. Write this out explicitly in your methodology section — it converts a statistical inference into a theoretically grounded claim and is more convincing to a reviewer than any p-value.
+# This is a textbook MNAR mechanism: P(nperps is missing) is highest precisely when nperps is small, because small attacks are the hardest to confirm. The missing value predicts its own missingness.
 ```
-
-# Conclusion
-
-This research demonstrates that Multiple Imputation by Chained Equations can recover substantively meaningful perpetrator group classifications from a dataset in which 83% of perpetrator count records are missing, provided the imputation pipeline is carefully designed around the structure of the missingness. Formal testing confirmed that the GTD's perpetrators data is Missing Not At Random: the probability of missingness is highest precisely when the true perpetrator count is smallest, because lone wolf and small cell attacks are the hardest to confirm from independent sources at the time of coding. Despite this unfavorable missingness mechanism, the continuous imputation model (Model A) achieved 90.7% sensitivity in correctly classifying lone wolf attacks after binning imputed perpetrator counts into the three-category scheme, with decreasing but still interpretable performance across the Small Cell and Large Group categories. A tipping-point sensitivity analysis further demonstrated that the key predictor relationships held even when all imputed perpetrator counts were shifted upward by two, the most pessimistic plausible deviation from the MAR assumption. This confirms that the primary conclusions are robust to the NMAR bias that listwise deletion or naive imputation would have introduced.
-
-The logistic regression results pooled across imputed datasets reveal that individual and group attackers differ more in their choice of method than in their ultimate outcomes. When attack type and weapon type are held constant, lone wolf and group attacks produce comparable casualty distributions. However, non-parametric testing of unadjusted casualty counts identified a highly significant distributional difference between lone wolves and multi-perpetrator attacks (H(2) = 1210.5, p < 0.001), with a notable threshold effect: Small Cell and Large Group attacks were statistically indistinguishable from one another (p = 0.53), suggesting that introducing even a minimal network of two to five actors fundamentally shifts the lethality profile of an attack to match that of large organized groups. Tactically, lone wolf attackers are disproportionately likely to employ vehicles and to commit suicide attacks, while region and target type were weak standalone predictors, with the exception of the Levant, which exhibited elevated individual-actor probability relative to Asia where group-based attacks predominate.
-
-These findings carry practical implications for both counterterrorism risk assessment and for the broader methodological literature on imputation in conflict databases. The comparison between the attack type distributions of the full GTD, the listwise deletion subset, and the GTD-ACLED shared event set illustrates how conventional data reduction strategies systematically distort the apparent prevalence of bombing and armed assault relative to other attack types, a bias that compounds when downstream models treat the reduced dataset as representative. By contrast, MICE with method selection tailored to each variable's distribution and cardinality produced a recoverable signal from a field that prior quantitative analyses have largely discarded. Future work should explore whether the emerging ensemble-based meta-imputation frameworks can further reduce the residual NMAR bias, particularly those that incorporate missingness indicator variables directly into the imputation model.
-
-\clearpage
-
-# Appendix 1: Imputation methods against other datasets
-
-In the tangential field of Biomedical data, Azad has shown the promise of ensemble-based methods that combine contextual models with ensemble models to produced balanced approaches that adjust weights of predictors across multiple missing fields [@Azad2025]. This approach may allow analysts to bridge the gap between records where generating a RAG of applicable context (such as English language news articles for models that are training against English language data) is not available.
-
-Accounting for the level of missingness using a mask indicator is also useful to identify patterns in NMAR datasets. Using this method, Perez-Lebel benchmarked imputation approaches on healthcare databases and found that tree-based models utilizing Missing Incorporated in Attributes (MIA) provide the best balance of accuracy and speed [@PerezLebel2022]. When data is weakly correlated, a Ranked k-Nearest Neighbors (RkNN) can perform well. @Khan2024 introduces the RkNN algorithm to refine traditional kNN imputation. By utilizing Ranked Set Sampling, this algorithm better handles data variability and reduces error when variables are weakly correlated or lack sufficient nearby neighbors.
-
-Extensive research has been performed leveraging ensemble frameworks to reduce variance and improve prediction accuracy. @Aleryani2020 proposed Multiple Imputation Ensembles (MIE), a system where multiple imputation techniques and ensemble methods collaborate to produce a superior final prediction when data is Missing Completely At Random. @Azad2025 detailed the Meta-Imputation Balanced (MIB) framework, which trains a supervised meta-model on synthetically masked data to intelligently weigh the outputs of multiple base imputers. These methods are automated, powerful tools, which trade computational performance for accuracy. A key advantage is the ability for the models to seek and identify statistically significant fields on their own, although this can also be a hazard when colinear variables or keys are included for contention, reducing the external validity of the model to impute new data.
-
-The authors above have all successfully used ensemble-based models of various flavors to produce highly accurate predictive models. However, maintaining accuracy and reproducability of the model for new datasets is also critical. Štrumbelj and Kononenko discuss the process of evaluating the impact of ensemble models in the final product by adapting the Shapley value. The authors quantify the "fair" contribution of each feature value to a specific classification outcome, effectively revealing how much each variable influences a model's decision. To resolve the exponential time complexity typically associated with these calculations, the paper proposes a sampling-based approximation method that makes the technique computationally feasible for complex datasets [@JMLR:v11:strumbelj10a].
-
-Another option for field synthesis is the use of additional data sources connected without the direct tie between two fields. @Cai2025 developed a sophisticated AI-driven tool called FAME (Fingerprint to Article Matching for Events) to systematically track how global media outlets report on natural disasters and terrorist attacks. By utilizing a "fingerprint" constructed from a specific combination of event class, location, and date, the system filters millions of multilingual articles to identify those covering specific crises without the need for manual training data. This methodology reveals that news coverage is heavily biased toward wealthier nations and those with significant trade ties, often requiring much higher death tolls in poorer regions to receive equivalent attention. Ultimately, this work provides an open-source framework for computational social science to measure and understand the systemic factors that shape the global news agenda.
 
 # References
