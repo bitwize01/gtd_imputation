@@ -59,6 +59,7 @@ library(kableExtra)
 library(webshot2) # export images for knitr
 library(magick)   # Improve quality of exported tables
 library(ggExtra)  # More cool plots
+library(ggstance) # position_dodgev() for horizontal forest plot dodging
 library(mice)     # R built-in logic to handle MICE for nperps
 library(future)       # Parallel backend for futuremice()
 library(future.apply) # future_lapply() used internally by futuremice()
@@ -649,7 +650,7 @@ build_attacktype_plot_data <- function(completed_long) {
              levels = c("Lone Wolf", "Small Cell", "Large Group")))
 }
 
-# Model B: nperps_cat imputed directly via POLR
+# Model B: nperps_cat imputed directly
 attacktype_cat <- build_attacktype_plot_data(
   complete(mice_cat_results, action = "long")
 ) %>% mutate(model = "Model B: Categorical")
@@ -705,7 +706,7 @@ After ensuring that my training and test data contained a sufficient proportion 
 
 For variables that have a high degree of impact on the outcome of a record, but also have a high degree of cardinality such as group name, country, and state/province, I applied a Classification and Regression tree (CART) function. CART operates by building decision trees to recursively partition predictors into pools of similar results, and then builds a tree based off the other low-cardinality predictors (year, region, attack type, weapon type) to sort the records. This sidesteps the dimensionality problem exemplified by random forest entirely by using the predictor space to find similar records, then sampling from their observed values. Like PMM, the imputed value is always a real observed group name, never a nonsensical interpolation.
 
-For the ordered categorical factor I made grouping the number of perpetrators, I examined the use of a Proportional Odds Logistic Regression (POLR) function. POLR is an extension of binary logistic regression for ordered categorical outcomes. Rather than modeling a single binary boundary, it models K-1 cumulative boundaries simultaneously, one for each transition between adjacent levels, weighing the proportional odds of the predictors at each boundary level. This method does come with a hazard as it establishes the same predictive effect as each boundary is crossed. For instance, 80% of suicide attacks in the GTD involve only a single perpetrator, making this a highly impactful predictor, and of the remainder, only half as many large group attacks were suicide attacks as compared to small groups. With the predictor effect of suicide attacks varying strongly across groups. In my evaluation of the number of perpetrators against the GTD, the difference in predictors between categories (see figure 4) resulted in a strong bias 
+For the ordered categorical factor I produced grouping the number of perpetrators, I examined the use of a Proportional Odds Logistic Regression (POLR) function. POLR is an extension of binary logistic regression for ordered categorical outcomes. Rather than modeling a single binary boundary, it models K-1 cumulative boundaries simultaneously, one for each transition between adjacent levels, weighing the proportional odds of the predictors at each boundary level. This method does come with a hazard as it establishes the same predictive effect as each boundary is crossed. For instance, 80% of suicide attacks in the GTD involve only a single perpetrator, making this a highly impactful predictor, and of the remainder, only half as many large group attacks were suicide attacks as compared to small groups. With the predictor effect of suicide attacks varying strongly across groups. In my evaluation of the number of perpetrators against the GTD, the difference in predictors between categories (see figure 4) resulted in a strong bias and a 17% reduction in predictive accuracy for the individual category, with accuracy improving by group size. This was a counter-intuitive finding given the low predictive power of incremental changes in the predictors on the number of perpetrators. This was confirmed by running a 
 
 For all other variables being imputed, I used a random forest model. Random Forest's suitability as the default imputation method in MICE pipelines stems from its flexibility and robustness as a non-parametric learner. Unlike parametric methods such as POLR or linear regression, Random Forest imposes no assumptions about the underlying distribution or functional form of relationships in the data, instead discovering structure empirically through recursive partitioning. This allows it to capture complex interactions and non-linear relationships between predictors — such as the interplay between region, attack type, and year in determining perpetrator counts that parametric methods would miss or misrepresent. Its native handling of mixed data types eliminates the need for manual preprocessing or dummy coding of categorical variables, and its ensemble aggregation naturally dampens the influence of irrelevant predictors, since uninformative variables are selected at splits only by chance and contribute little to the final predictions. Together these properties make Random Forest a robust, largely assumption-free default that can be applied broadly across the heterogeneous predictor space of a dataset like the GTD without requiring variable-by-variable method tuning.
 
@@ -715,7 +716,7 @@ It is also critical to ensure the MICE imputation process avoids using some vari
 
 ## Computational resources and Performance
 
-My final collection of imputation runs were performed on a personal computer with 8 CPU cores and 32 GB of RAM. Predicting the continuous number of perpetrators value required 8 rounds of 20 iterations each, while predicting the grouped number of perpetrators only required 8 rounds of 10 iterations. The number of rounds leveraged the use of running each round of iterations in parallel to leverage each CPU core (in groups of 4 rounds), improving the runtime from 2 days per imputation run when run serially to roughly 5 hours when run in parallel. 
+My final collection of imputation runs were performed on a personal computer with 8 CPU cores and 32 GB of RAM. Predicting the continuous number of perpetrators value required 8 rounds of 20 iterations each, while predicting the grouped number of perpetrators only required 8 rounds of 10 iterations. The number of rounds leveraged the use of running each round of iterations in parallel to leverage each CPU core (in groups of 4 rounds), improving the runtime from 2 days per imputation run when run serially to roughly 5 hours per model when run in parallel. 
 
 The iteration values were determined by an evaluation of the convergence between rounds, demonstrating MICE's improvement process as the randomly-selected predictor weights from each random forest model reach a consensus by comparison.
 
@@ -777,7 +778,7 @@ p_cat  <- plot_trace(trace_cat,  "Model B: Categorical (nperps_cat)")
 p_cont + p_cat + plot_layout(guides = "collect") & theme(legend.position = "bottom")
 ```
 
-After training, I generated a confusion matrix against the unimputed data for comparison purposes. The results of the MICE model reflect a relatively high degree of accuracy in predicting if an attack was perpetrated by an individual (97.7%), with decreasing performance for the small and large group categories. I then applied logistic regression against my imputed results to examine the differences in outcomes and tactics, if any, between attacks by individuals and groups. I determined that while individuals and groups have similar outcomes when the same attack and weapon types are considered, individual terrorist attackers are far more likely to employ vehicles and to commit suicide attacks. Region and Target Type were not strong predictors on their own, although comparisons within the region category show an increased probability of single actor terrorism in the Levant in comparison to Asia, where terrorist attacks involve more actors working in groups. Radiological weapons were excluded from the logistic regression visualization due to quasi-complete separation caused by insufficient event frequency.
+After training, I generated a confusion matrix against the unimputed data for comparison purposes. The results of the MICE model reflect a relatively high degree of accuracy in predicting if an attack was perpetrated by an individual (90.7%), with decreasing performance for the small and large group categories. I then applied logistic regression against my imputed results to examine the differences in outcomes and tactics, if any, between attacks by individuals and groups. I determined that while individuals and groups have similar outcomes when the same attack and weapon types are considered, individual terrorist attackers are far more likely to employ vehicles and to commit suicide attacks. Region and Target Type were not strong predictors on their own, although comparisons within the region category show an increased probability of single actor terrorism in the Levant in comparison to Asia, where terrorist attacks involve more actors working in groups. Radiological weapons were among a handful of weapon types that needed to be excluded from the logistic regression visualization due to quasi-complete separation caused by insufficient event frequency.
 
 ```{r mice_accuracy, include=FALSE}
 #| cache: true
@@ -929,14 +930,6 @@ metrics_wide %>%
   add_header_above(c(" " = 1, "Continuous Data" = 2, "Binned Categories" = 2))
 ```
 
-# Conclusion
-
-
-
-## Accuracy of MICE imputation against the GTD
-
-
-
 ```{r conf_plot, include=FALSE}
 #| cache: true
 #| label: fig7
@@ -1011,9 +1004,11 @@ pairwise.wilcox.test(gtd_clean_final$nkill, gtd_clean_final$nperps_cat,
                      p.adjust.method = "holm")
 ```
 
-A Kruskal-Wallis rank sum test was conducted to determine if there were differences in the number of casualties (nkill) based on the size of the perpetrator group. The results indicated a highly significant difference in the distribution of casualties between Lone Wolf, Small Cell, and Large Group attacks ($H(2) = 1210.5, p < 0.001$). To determine where the significant differences in casualties lay among the perpetrator categories, a post-hoc pairwise Wilcoxon rank sum test was conducted using the Holm method to control for multiple comparisons. The analysis revealed that Lone Wolf attacks resulted in significantly different casualty distributions when compared to both Small Cells ($p < 0.001$) and Large Groups ($p < 0.001$). Notably, there was no statistically significant difference in fatalities between Small Cells and Large Groups ($p = 0.53$). This suggests a critical threshold effect in terrorist operations: while independent actors exhibit a distinct lethality profile, the introduction of even a small network (2-5 perpetrators) shifts the casualty distribution to match that of large-scale group attacks. Consequently, casualty metrics serve as a strong discriminator for imputing independent actors, but offer diminishing returns when attempting to differentiate the size of multi-perpetrator networks.
+## Analysis of MICE imputation against the GTD
 
-When examining the effect that tactics and group composition has on casualties in terror attacks, I was concerned that the extreme overdispersion of casualties would result in a standard regression model underestimating the standard errors, leading to false significance. This is a particular risk when considering the imputed dataset, which may already have been overrepresenting the number of individual perpetrators. As a result, I implemented a Zero-inflated negative binomial (ZINB) model to examine the relationship between nkill and the other predictors. The ZINB model separates the structurally missing (data not determined by GTD) data from the attack data where the attack was a failure. However, upon production of the model, its predictors bias matched the Negative Binomial result. The model slightly under-predicts single fatalities at the expense of an over-prediction of all other values, but overall the model performs well.
+A Kruskal-Wallis rank sum test was conducted to determine if there were differences in the number of casualties based on the size of the perpetrator group. The results indicated a highly significant difference in the distribution of casualties between Lone Wolf, Small Cell, and Large Group attacks ($H(2) = 1210.5, p < 0.001$). To determine where the significant differences in casualties lay among the perpetrator categories, a post-hoc pairwise Wilcoxon rank sum test was conducted using the Holm method to control for multiple comparisons. The analysis revealed that Lone Wolf attacks resulted in significantly different casualty distributions when compared to both Small Cells ($p < 0.001$) and Large Groups ($p < 0.001$). Notably, there was no statistically significant difference in fatalities between Small Cells and Large Groups ($p = 0.53$). This suggests a critical threshold effect in terrorist operations: while independent actors exhibit a distinct lethality profile, the introduction of even a small network (2-5 perpetrators) shifts the casualty distribution to match that of large-scale group attacks. Consequently, casualty metrics serve as a strong discriminator for imputing independent actors, but offer diminishing returns when attempting to differentiate the size of multi-perpetrator networks.
+
+When examining the effect that tactics and group composition has on casualties in terror attacks, I was concerned that the extreme overdispersion of casualties would result in a standard regression model underestimating the standard errors, leading to false significance. This is a particular risk when considering the imputed dataset, which may already have been overrepresenting the number of individual perpetrators. As a result, I implemented a Zero-inflated negative binomial (ZINB) model to examine the relationship between nkill and the other predictors. The ZINB model separates the structurally missing (deliberately withheld as unknown) data from the attack data where the attack was a failure with 0 casualties.
 
 ```{r zinb_model, include=FALSE}
 #| cache: true
@@ -1082,19 +1077,137 @@ zero_model_ors <- zero_model_results %>%
          conf.high_or = exp(conf.high))
 ```
 
-```{r mice_results_plot}
+```{r colinear, include=FALSE}
+# Extract one dataset to test
+test_data <- complete(mice_cat_results, 1)
+
+# Run a dummy model to check for collinearity
+dummy_model <- glm(nkill ~ nperps_cat + region + attacktype1 + weaptype1, data = test_data)
+
+# This will print the exact variables that are perfectly correlated
+alias(dummy_model)
+```
+
+```{r rootogram_plot_3, include=FALSE}
+#| cache: true
+plot_limit <- 25
+
+# Use a single completed imputation so rootogram reflects the actual imputed data
+# rather than the listwise-deleted gtd_clean_final subset (83% missing nperps)
+gtd_imputed_single <- complete(mice_cont_results, 1) %>%
+  mutate(nperps_cat = case_when(
+    nperps == 1               ~ "Lone Wolf",
+    nperps > 1 & nperps <= 5  ~ "Small Cell",
+    nperps > 5                ~ "Large Group"
+  ),
+  nperps_cat = ordered(nperps_cat,
+                        levels = c("Lone Wolf", "Small Cell", "Large Group"))) %>%
+  filter(!is.na(nkill))
+
+plot_nb <- glm.nb(nkill ~ nperps_cat + region + attacktype1 + weaptype1,
+                  data = gtd_imputed_single)
+
+# ZINB: fit on raw gtd_clean_final (83% missing nperps) to demonstrate
+# how high missingness undermines reliable model estimation even with ZINB
+plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1,
+                      data = gtd_clean_final, dist = "negbin")
+```
+
+```{r rootogram_plot_4, include=FALSE}
+#| cache: true
+
+# NB expected frequencies from imputed data
+mu_nb    <- predict(plot_nb, type = "response")
+theta_nb <- plot_nb$theta
+expected_freq_nb <- sapply(0:plot_limit, function(i)
+  sum(dnbinom(i, mu = mu_nb, size = theta_nb)))
+
+# ZINB expected frequencies from raw missing data — manual component decomposition
+# avoids broken predict(type = "prob") and correctly applies ZINB probability mass
+mu_zinb    <- predict(plot_zinb, type = "count")
+pi_zinb    <- predict(plot_zinb, type = "zero")
+theta_zinb <- plot_zinb$theta
+expected_freq_zinb <- sapply(0:plot_limit, function(i) {
+  p_i <- (1 - pi_zinb) * dnbinom(i, mu = mu_zinb, size = theta_zinb) +
+         if (i == 0) pi_zinb else 0
+  sum(p_i)
+})
+
+# Each rootogram uses observed frequencies from its own data source
+observed_freq_nb   <- table(factor(gtd_imputed_single$nkill, levels = 0:plot_limit))
+observed_freq_zinb <- table(factor(gtd_clean_final$nkill,    levels = 0:plot_limit))
+
+df_nb <- data.frame(
+  Count = 0:plot_limit,
+  Observed = as.numeric(observed_freq_nb),
+  Expected = as.numeric(expected_freq_nb)
+) %>%
+  mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
+
+df_zinb <- data.frame(
+  Count = 0:plot_limit,
+  Observed = as.numeric(observed_freq_zinb),
+  Expected = as.numeric(expected_freq_zinb)
+) %>%
+  mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
+```
+
+```{r rootogram_plot_5, include=FALSE}
+#| cache: true
+# Helper function
+build_rootogram <- function(data, title) {
+  ggplot(data, aes(x = Count)) +
+    geom_segment(aes(x = Count, xend = Count, y = Sqrt_Exp, yend = Bottom), 
+                 linewidth = 4, color = "steelblue", alpha = 0.8) +
+    geom_line(aes(y = Sqrt_Exp), color = "red", linewidth = 1) +
+    geom_point(aes(y = Sqrt_Exp), color = "red", size = 2) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+    labs(
+      title = title,
+      x = "Number of Fatalities (nkill)",
+      y = expression(sqrt("Frequency"))
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(face = "bold", size = 12))
+}
+```
+
+```{r rootogram_plot_6, include=TRUE}
+#| cache: true
+#| label: fig9
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 6
+#| fig-height: 3
+#| fig-cap: "Rootogram Display of the predicitve over or underfit of the model on the number of casualties from the continuous imputed dataset"
+#| fig-align: "center"
+# Create both plots
+plot1 <- build_rootogram(df_nb, "Standard Negative\nBinomial model")
+plot2 <- build_rootogram(df_zinb, "Zero-Inflated\nNegative Binomial")
+plot1 | plot2
+```
+
+A rootogram of the imputed and un-imputed datasets was generated with a negative binomial model, and compared to a rootogram of the unimputed data. Because the unimputed data has a very high level of missignness, I employed a Zero-Inflated Negative Binomial in an attempt to fit the data while accounting for the missing values. This handles the dispersion of the variables well, and the results indicate that the predictive power between the imputed data with a standard negative binomial model and the unimputed data with a zero-inflated negative binomial exhibit similar (but not identical) characteristics. This leads me to conclude that the model weights used for data imputation reveal trends in the data that expose the MNAR confounding effect. For instance, suicide attacks are significantly more likely to be perpetrated by a single individual, and attacks against abortion clinics and religious figures also lean towards being perpetrated by individuals. If future attacks were seeking attribution or being investigated, the weights here provide a starting reference point.
+
+
+```{r mice_results_plot, include = TRUE}
 #| cache: true
 #| label: fig8
 #| fig-cap: "Predictors of Independent Actor (Lone Wolf) Terrorism"
 #| fig-width: 12
 #| fig-height: 10
 #| out-width: "100%"
-# Tidy the data and calculate Odds Ratios at 95% confidence
-# Source: pooled logistic regression on nperps_cat (Model B), not the ZINB nkill model
-plot_data <- tidy(pooled_results_nperps_cat, conf.int = TRUE, exponentiate = TRUE)
-plot_data <- plot_data %>%
-  # Remove the Intercept, as it only represents the baseline odds and skews the plot
+# Tidy both pooled models and tag with source label
+plot_data_cat  <- tidy(pooled_results_nperps_cat, conf.int = TRUE, exponentiate = TRUE) %>%
+  mutate(model = "Model B: Categorical (POLR)")
+plot_data_cont <- tidy(pooled_results_nperps,     conf.int = TRUE, exponentiate = TRUE) %>%
+  mutate(model = "Model A: Continuous (RF + PMM)")
+
+plot_data <- bind_rows(plot_data_cat, plot_data_cont) %>%
   filter(term != "(Intercept)") %>%
+  mutate(model = factor(model, levels = c("Model A: Continuous (RF + PMM)",
+                                           "Model B: Categorical (POLR)"))) %>%
   mutate(
     category = case_when(
       grepl("attacktype", term) ~ "Attack Type",
@@ -1176,18 +1289,24 @@ plot_data <- plot_data %>%
   # Filter out the Radiological outlier causing the X-axis blowout
   filter(clean_term != "Radiological")
 
-forest_plot_quad <- ggplot(plot_data, aes(x = estimate, y = reorder(clean_term, estimate), color = category)) +
+forest_plot_quad <- ggplot(plot_data,
+    aes(x = estimate, y = reorder(clean_term, estimate),
+        color = model, group = model)) +
   geom_vline(xintercept = 1, linetype = "dashed", color = "darkgrey", size = 1) +
-  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2, color = "#2C3E50", size = 0.8) +
-  geom_point(size = 3, color = "#E74C3C") +
-  scale_x_log10() + # Use a logarithmic scale for the X-axis
-  facet_wrap(~ category, scales = "free_y", ncol = 2) + # 4 times the chart, bruv
-  scale_color_brewer(palette = "Set1") +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
+                 height = 0.2, size = 0.7,
+                 position = position_dodgev(height = 0.5)) +
+  geom_point(size = 2.5, position = position_dodgev(height = 0.5)) +
+  scale_x_log10() +
+  facet_wrap(~ category, scales = "free_y", ncol = 2) +
+  scale_color_manual(values = c("Model A: Continuous (RF + PMM)" = "steelblue",
+                                 "Model B: Categorical (POLR)"    = "#E74C3C")) +
   labs(
     title = "Predictors of Independent Actor (Lone Wolf) Terrorism",
     subtitle = "Odds Ratios with 95% Confidence Intervals (Pooled from MICE)",
     x = "Odds Ratio (Log Scale)",
-    y = ""
+    y = "",
+    color = NULL
   ) +
   theme_minimal() +
   theme(
@@ -1195,100 +1314,15 @@ forest_plot_quad <- ggplot(plot_data, aes(x = estimate, y = reorder(clean_term, 
     axis.text.y = element_text(size = 10, face = "bold"),
     plot.title = element_text(face = "bold", size = 16),
     strip.text = element_text(face = "bold", size = 12),
-    legend.position = "none"
+    legend.position = "bottom"
   )
 
 forest_plot_quad
 ```
 
-```{r colinear, include=FALSE}
-# Extract one dataset to test
-test_data <- complete(mice_cat_results, 1)
+As MICE is primarily designed for MAR data and the missing fields are assuredly MNAR, I sought to examine if the imputation results would hold under this conditions. A tipping-point analysis against the suicide flag, a highly related predictor of if the number of perpetrators, held up until a delta of 2. This indicates that with careful treatment and preparation of variables, the imputation process holds potential even for highly missing fields.
 
-# Run a dummy model to check for collinearity
-dummy_model <- glm(nkill ~ nperps_cat + region + attacktype1 + weaptype1, data = test_data)
-
-# This will print the exact variables that are perfectly correlated
-alias(dummy_model)
-```
-
-```{r rootogram_plot_3, include=FALSE}
-#| cache: true
-plot_limit <- 25 
-plot_nb <- glm.nb(nkill ~ nperps_cat + region + attacktype1 + weaptype1, 
-                  data = gtd_clean_final)
-
-# Unfortunately these zinb calculations don't render. However the result matches
-# the nb plot identically.
-plot_zinb <- zeroinfl(nkill ~ nperps_cat + region | attacktype1 + weaptype1, 
-                      data = gtd_clean_final, dist = "negbin")
-# ZINB calculations
-expected_probs_zinb <- predict(plot_zinb, type = "prob", at = 0:plot_limit)
-expected_freq_zinb <- colSums(expected_probs_zinb[, 1:(plot_limit + 1)])
-```
-
-```{r rootogram_plot_4, include=FALSE}
-# Process the Data (Filtering to 25 to keep the plot readable)
-#| cache: true
-
-# Standard NB calculations
-mu_nb <- predict(plot_nb, type = "response")
-theta_nb <- plot_nb$theta
-expected_freq_nb <- sapply(0:plot_limit, function(i) sum(dnbinom(i, mu = mu_nb, size = theta_nb)))
-observed_freq <- table(factor(gtd_clean_final$nkill, levels = 0:plot_limit))
-
-df_nb <- data.frame(
-  Count = 0:plot_limit,
-  Observed = as.numeric(observed_freq),
-  Expected = as.numeric(expected_freq_nb)
-) %>%
-  mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
-
-df_zinb <- data.frame(
-  Count = 0:plot_limit,
-  Observed = as.numeric(observed_freq),
-  Expected = as.numeric(expected_freq_zinb)
-) %>%
-  mutate(Sqrt_Obs = sqrt(Observed), Sqrt_Exp = sqrt(Expected), Bottom = Sqrt_Exp - Sqrt_Obs)
-```
-
-```{r rootogram_plot_5, include=FALSE}
-#| cache: true
-# Helper function
-build_rootogram <- function(data, title) {
-  ggplot(data, aes(x = Count)) +
-    geom_segment(aes(x = Count, xend = Count, y = Sqrt_Exp, yend = Bottom), 
-                 linewidth = 4, color = "steelblue", alpha = 0.8) +
-    geom_line(aes(y = Sqrt_Exp), color = "red", linewidth = 1) +
-    geom_point(aes(y = Sqrt_Exp), color = "red", size = 2) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-    labs(
-      title = title,
-      x = "Number of Fatalities (nkill)",
-      y = expression(sqrt("Frequency"))
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(face = "bold", size = 12))
-}
-```
-
-```{r rootogram_plot_6, include=TRUE}
-#| cache: true
-#| label: fig9
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-width: 6
-#| fig-height: 3
-#| fig-cap: "Rootogram comparison demonstrating model fit between The Zero-Inflated model and the Standard Negative Binomial model"
-#| fig-align: "center"
-# Create both plots
-plot1 <- build_rootogram(df_nb, "Standard Negative Binomial")
-plot2 <- build_rootogram(df_zinb, "Zero-Inflated Negative Binomial")
-plot1 | plot2 #(ZINB identical to NB, can omit)
-```
-
-```{r missingness_exploration, include=TRUE}
+```{r missingness_exploration, include=FALSE}
 #| cache: true
 gtd_clean <- gtd_clean %>% mutate(nperps_missing = as.integer(is.na(nperps)))
 
@@ -1314,13 +1348,13 @@ mcar_result
 # This result of 0 formally proves that the data is not MCAR. The below tipping-point test disproves the MAR hypothesis. The only possibility left is NMAR.
 ```
 
-```{r flux_plot, include=TRUE}
+```{r flux_plot, include=FALSE}
 #| cache: true
 fluxplot(gtd_clean %>% dplyr::select(nperps, nkill, nwound, attacktype1,
                                weaptype1_cat, targtype1, region, suicide))
 ```
 
-```{r cat_bin_test, include=TRUE}
+```{r cat_bin_test, include=FALSE}
 #| cache: true
 # Subset to observed rows, artificially mask 30% (your test_ids), compare
 obs_data <- gtd_clean %>%
@@ -1334,7 +1368,7 @@ mf_result <- missForest(obs_data, maxiter = 10, ntree = 100,
 mf_result$OOBerror   # PFC for nperps_cat — directly comparable to confusion matrix
 ```
 
-```{r brier score decomposition, include=TRUE}
+```{r brier_score_decomposition, include=FALSE}
 #| cache: true
 # Extract polr predicted probs from one completed dataset
 d <- complete(mice_cat_results, 1)
@@ -1354,7 +1388,7 @@ brier <- mean(rowSums((probs - truth_matrix)^2))
 # Sadly this was 0.48
 ```
 
-```{r tipping_point_estimation, include=TRUE}
+```{r tipping_point_estimation, include=FALSE}
 #| cache: true
 deltas <- c(0, 0.5, 1, 1.5, 2)   # plausible upward shifts in nperps
 
@@ -1379,7 +1413,7 @@ bind_rows(tipping_results) %>%
 # If OR for lone-wolf status remains significantly above 1 even at delta = 2 (i.e., all imputed perpetrators are shifted 2 people higher), conclusion is robust to MNAR.
 ```
 
-```{r mice_pattern_analysis, include=TRUE}
+```{r mice_pattern_analysis, include=FALSE}
 #| cache: true
 mice::md.pattern(gtd_clean %>%
   dplyr::select(nperps, nkill, nwound, gname, attacktype1, region),
@@ -1388,7 +1422,7 @@ mice::md.pattern(gtd_clean %>%
 # Pattern analysis with md.pattern() shows you the joint missingness structure across variables. For nperps specifically, patterns where nkill is also missing at the same time suggest the event was poorly documented overall — consistent with a structural MAR mechanism (low-documentation events → everything missing). Patterns where nkill is observed but nperps is not are more consistent with MNAR (the attack was observed, but the perpetrator count was deliberately withheld or unknowable):
 ```
 
-```{r variable_importance_over_time, include=TRUE}
+```{r variable_importance_over_time, include=FALSE}
 #| cache: true
 miss_rf <- ranger(
   nperps_missing ~ attacktype1 + weaptype1_cat + targtype1 +
@@ -1403,7 +1437,7 @@ sort(importance(miss_rf), decreasing = TRUE)
 #Random forest variable importance on the missingness indicator extends the logistic regression approach above and captures nonlinear interactions. A high importance for iyear here would suggest the missingness mechanism has shifted over time — plausible if reporting practices improved, or if the composition of attacks changed toward more clandestine perpetrators:
 ```
 
-```{r covariate_distributions_observed_missing, include=TRUE}
+```{r covariate_distributions_observed_missing, include=FALSE}
 #| cache: true
 # Compare covariate distributions between observed and missing nperps rows
 gtd_clean %>%
@@ -1418,7 +1452,7 @@ gtd_clean %>%
   )
 ```
 
-```{r proxy_variable_auxiliary_correlation, include=TRUE}
+```{r proxy_variable_auxiliary_correlation, include=FALSE}
 #| cache: true
 # The START coding protocol omits nperps when counts cannot be confirmed. Attacks that are harder to confirm tend to be smaller, more diffuse, less claimed by a group.
 
@@ -1450,9 +1484,13 @@ lrtest(restricted_model, full_model)  # from lmtest, already in your setup
 # This is a textbook MNAR mechanism: P(nperps is missing) is highest precisely when nperps is small, because small attacks are the hardest to confirm. The missing value predicts its own missingness. Write this out explicitly in your methodology section — it converts a statistical inference into a theoretically grounded claim and is more convincing to a reviewer than any p-value.
 ```
 
-## Future work and next steps
+# Conclusion
 
-The results and efficacy of the model produced by MICE indicates the potential for a comparison analysis against the original data. Next steps will involve incorporating those comparisons as well as performing an analysis of changes over time in the tactics of individual attackers, seeking to find a causal effect for the increase in lone wolf attacks and their increased ratio of fatalities in recent years.
+This research demonstrates that Multiple Imputation by Chained Equations can recover substantively meaningful perpetrator group classifications from a dataset in which 83% of perpetrator count records are missing, provided the imputation pipeline is carefully designed around the structure of the missingness. Formal testing confirmed that the GTD's perpetrators data is Missing Not At Random: the probability of missingness is highest precisely when the true perpetrator count is smallest, because lone wolf and small cell attacks are the hardest to confirm from independent sources at the time of coding. Despite this unfavorable missingness mechanism, the continuous imputation model (Model A) achieved 90.7% sensitivity in correctly classifying lone wolf attacks after binning imputed perpetrator counts into the three-category scheme, with decreasing but still interpretable performance across the Small Cell and Large Group categories. A tipping-point sensitivity analysis further demonstrated that the key predictor relationships held even when all imputed perpetrator counts were shifted upward by two, the most pessimistic plausible deviation from the MAR assumption. This confirms that the primary conclusions are robust to the NMAR bias that listwise deletion or naive imputation would have introduced.
+
+The logistic regression results pooled across imputed datasets reveal that individual and group attackers differ more in their choice of method than in their ultimate outcomes. When attack type and weapon type are held constant, lone wolf and group attacks produce comparable casualty distributions. However, non-parametric testing of unadjusted casualty counts identified a highly significant distributional difference between lone wolves and multi-perpetrator attacks (H(2) = 1210.5, p < 0.001), with a notable threshold effect: Small Cell and Large Group attacks were statistically indistinguishable from one another (p = 0.53), suggesting that introducing even a minimal network of two to five actors fundamentally shifts the lethality profile of an attack to match that of large organized groups. Tactically, lone wolf attackers are disproportionately likely to employ vehicles and to commit suicide attacks, while region and target type were weak standalone predictors, with the exception of the Levant, which exhibited elevated individual-actor probability relative to Asia where group-based attacks predominate.
+
+These findings carry practical implications for both counterterrorism risk assessment and for the broader methodological literature on imputation in conflict databases. The comparison between the attack type distributions of the full GTD, the listwise deletion subset, and the GTD-ACLED shared event set illustrates how conventional data reduction strategies systematically distort the apparent prevalence of bombing and armed assault relative to other attack types, a bias that compounds when downstream models treat the reduced dataset as representative. By contrast, MICE with method selection tailored to each variable's distribution and cardinality produced a recoverable signal from a field that prior quantitative analyses have largely discarded. Future work should explore whether the emerging ensemble-based meta-imputation frameworks can further reduce the residual NMAR bias, particularly those that incorporate missingness indicator variables directly into the imputation model.
 
 \clearpage
 
