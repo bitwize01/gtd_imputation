@@ -332,7 +332,7 @@ with_progress({
 
 # Predictor matrix for Model B derived from training rows only (same split as Model A)
 train_data_cat <- gtd_clean %>%
-  filter(eventid %in% train_ids) %>%
+  dplyr::filter(eventid %in% train_ids) %>%
   dplyr::select(all_of(base_vars), nperps_cat) %>%
   mutate(across(all_of(factor_vars), as.factor))
 
@@ -358,26 +358,51 @@ impute_data_cat <- gtd_clean %>%
   mutate(across(all_of(factor_vars), as.factor))
 
 # Compute inverse-frequency class weights from observed training rows to correct
-# ~65% Lone Wolf imbalance. Reweights RF vote tallies without discarding data.
+# ~65% Lone Wolf imbalance.
 obs_train_cat  <- train_data_cat %>% filter(!is.na(nperps_cat))
 class_counts   <- table(obs_train_cat$nperps_cat)
 class_weights  <- 1 / class_counts
 class_weights  <- class_weights / sum(class_weights)
 
-# Run Model B: nperps_cat as factorized binned categorical variable
-progressr::handlers("txtprogressbar")
-with_progress({
-  mice_cat_results <- futuremice(impute_data_cat,
-                                 m = 8,
-                                 maxit = 20,
-                                 method = imp_meth_cat,
-                                 predictorMatrix = pred_mat_cat,
-                                 post = post_cat,
-                                 parallelseed = 101,
-                                 n.core = 4,
-                                 rfPackage = "randomForest",
-                                 classwt = list(nperps_cat = class_weights))
-})
+# Custom imputation method: RF with class weights applied only to nperps_cat.
+# Passing classwt via mice()'s named-list routing causes the whole list to be
+# forwarded to every other rf-method variable (e.g. suicide, attacktype1),
+# whose class counts differ from length(classwt), crashing randomForest.
+# Wrapping the call here keeps class_weights scoped to nperps_cat only.
+mice.impute.rfcat <- function(y, ry, x, wy = NULL, ...) {
+  mice::mice.impute.rf(y, ry, x, wy = wy, classwt = class_weights, ...)
+}
+imp_meth_cat["nperps_cat"] <- "rfcat"
+
+# Run Model B in parallel: 4 workers each run mice(m=2) on the full dataset,
+# then ibind into m=8.  Running the full dataset per worker (rather than
+# futuremice's row-split strategy) guarantees all three nperps_cat classes are
+# always present in every worker's RF training data.
+# mice.impute.rfcat is not auto-detected by future's static analysis (it is
+# referenced only as the string "rfcat" inside imp_meth_cat), so it is listed
+# explicitly in future.globals and assigned to the worker's .GlobalEnv so that
+# mice's internal get("mice.impute.rfcat") can resolve it.
+future::plan(future::multisession, workers = 4L)
+mice_parts <- future.apply::future_lapply(
+  seq_len(4L),
+  function(i) {
+    assign("mice.impute.rfcat", mice.impute.rfcat, envir = .GlobalEnv)
+    mice(impute_data_cat,
+         m               = 2L,
+         maxit           = 20,
+         method          = imp_meth_cat,
+         predictorMatrix = pred_mat_cat,
+         post            = post_cat,
+         seed            = 100L + i,
+         printFlag       = FALSE)
+  },
+  future.globals  = c("impute_data_cat", "imp_meth_cat", "pred_mat_cat",
+                      "post_cat", "mice.impute.rfcat"),
+  future.packages = "mice",
+  future.seed     = TRUE
+)
+future::plan(future::sequential)
+mice_cat_results <- Reduce(mice::ibind, mice_parts)
 ```
 
 ```{r nperps_log_models, include=FALSE}
