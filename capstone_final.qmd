@@ -391,7 +391,15 @@ future::plan(future::multisession, workers = 4L)
 mice_parts <- future.apply::future_lapply(
   seq_len(4L),
   function(i) {
-    assign("mice.impute.rfcat", mice.impute.rfcat, envir = .GlobalEnv)
+    # Redefine mice() inside the lambda so the closure's enclosing environment is this
+    # local frame, where future.globals has placed class_weights. Assigning the
+    # externally-defined mice.impute.rfcat does not change its enclosing
+    # environment, so class_weights would be unreachable from the original closure.
+    assign("mice.impute.rfcat",
+           function(y, ry, x, wy = NULL, ...) {
+             mice::mice.impute.rf(y, ry, x, wy = wy, classwt = class_weights, ...)
+           },
+           envir = .GlobalEnv)
     mice(impute_data_cat,
          m               = 2L,
          maxit           = 20,
@@ -402,7 +410,7 @@ mice_parts <- future.apply::future_lapply(
          printFlag       = FALSE)
   },
   future.globals  = c("impute_data_cat", "imp_meth_cat", "pred_mat_cat",
-                      "post_cat", "mice.impute.rfcat", "class_weights"),
+                      "post_cat", "class_weights"),
   future.packages = "mice",
   future.seed     = TRUE
 )
