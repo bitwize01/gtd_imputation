@@ -30,6 +30,11 @@ execute:
   echo: false
   warning: false
   message: false
+  
+# Claude used for code debugging, in particular plot formatting and parallelization optimization
+# Gemini used for source hunting for prior works
+nocite: |
+  @anthropic2025claude, @google2025gemini
 ---
 
 \clearpage
@@ -397,7 +402,7 @@ mice_parts <- future.apply::future_lapply(
          printFlag       = FALSE)
   },
   future.globals  = c("impute_data_cat", "imp_meth_cat", "pred_mat_cat",
-                      "post_cat", "mice.impute.rfcat"),
+                      "post_cat", "mice.impute.rfcat", "class_weights"),
   future.packages = "mice",
   future.seed     = TRUE
 )
