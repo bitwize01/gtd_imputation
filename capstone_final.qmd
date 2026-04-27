@@ -877,6 +877,11 @@ modal_val <- function(x) {
 # Returns the probability cutoff on `prob` that maximises J = Sens + Spec - 1
 youden_threshold <- function(prob, truth_binary,
                              grid = seq(0.05, 0.95, by = 0.01)) {
+  # Drop rows where either value is NA (mar_val_ids can have observed nperps
+  # but missing nperps_cat, which propagates NA into truth_binary comparisons)
+  keep         <- !is.na(prob) & !is.na(truth_binary)
+  prob         <- prob[keep]
+  truth_binary <- truth_binary[keep]
   j_vals <- sapply(grid, function(t) {
     pred <- prob >= t
     tp <- sum(pred  &  truth_binary); fn <- sum(!pred &  truth_binary)
@@ -895,7 +900,8 @@ youden_threshold <- function(prob, truth_binary,
 # free from the MNAR selection bias that affects the test-set evaluation.
 # -------------------------------------------------------------------
 set.seed(202)
-mar_candidate_ids <- observed_rows$eventid[observed_rows$eventid %in% train_ids]
+mar_candidate_ids <- observed_rows$eventid[
+  observed_rows$eventid %in% train_ids & !is.na(observed_rows$nperps_cat)]
 mar_val_ids       <- sample(mar_candidate_ids,
                             size = floor(0.2 * length(mar_candidate_ids)))
 
@@ -923,6 +929,25 @@ eval_data_cont <- gtd_clean %>%
   mutate(across(all_of(factor_vars), as.factor)) %>%
   mutate(nperps = if_else(eventid %in% c(test_ids, mar_val_ids), NA_real_, nperps))
 
+# Recompute case weights for eval_data_cont directly — cont_case_weights from
+# mice_nperps is sized for impute_data_cont and may not survive cache loading.
+# Using eval_data_cont's own observed rows also gives correct inverse-frequency
+# weights for the evaluation distribution (more rows are masked here).
+obs_eval_mask     <- !is.na(eval_data_cont$nperps)
+obs_eval_nperps   <- eval_data_cont$nperps[obs_eval_mask]
+eval_cat          <- dplyr::case_when(
+  obs_eval_nperps == 1                       ~ "Lone Wolf",
+  obs_eval_nperps > 1 & obs_eval_nperps <= 5 ~ "Small Cell",
+  obs_eval_nperps > 5                        ~ "Large Group"
+)
+eval_wt           <- (1 / table(eval_cat)) / sum(1 / table(eval_cat))
+eval_case_weights <- rep(1, nrow(eval_data_cont))
+eval_case_weights[obs_eval_mask] <- dplyr::case_when(
+  obs_eval_nperps == 1                       ~ as.numeric(eval_wt["Lone Wolf"]),
+  obs_eval_nperps > 1 & obs_eval_nperps <= 5 ~ as.numeric(eval_wt["Small Cell"]),
+  obs_eval_nperps > 5                        ~ as.numeric(eval_wt["Large Group"])
+)
+
 progressr::handlers("txtprogressbar")
 with_progress({
   eval_imp_cont <- futuremice(eval_data_cont,
@@ -932,7 +957,7 @@ with_progress({
                               predictorMatrix = pred_mat_cont,
                               parallelseed = 101,
                               n.core = 4,
-                              weights = cont_case_weights)
+                              weights = eval_case_weights)
 })
 
 # Soft pooling: compute per-class vote fractions across 8 imputations.
@@ -997,7 +1022,7 @@ progressr::handlers("txtprogressbar")
 with_progress({
   eval_imp_cat <- futuremice(eval_data_cat,
                              m = 8,
-                             maxit = 10,
+                             maxit = 20,
                              method = imp_meth_cat,
                              predictorMatrix = pred_mat_cat,
                              post = post_cat,
