@@ -1018,19 +1018,40 @@ eval_data_cat <- gtd_clean %>%
          nperps_cat = ordered(nperps_cat,
                               levels = c("Lone Wolf", "Small Cell", "Large Group")))
 
-progressr::handlers("txtprogressbar")
-with_progress({
-  eval_imp_cat <- futuremice(eval_data_cat,
-                             m = 8,
-                             maxit = 20,
-                             method = imp_meth_cat,
-                             predictorMatrix = pred_mat_cat,
-                             post = post_cat,
-                             parallelseed = 101,
-                             n.core = 4,
-                             rfPackage = "randomForest",
-                             classwt = list(nperps_cat = class_weights))
-})
+# Recompute class_weights defensively — may not survive the nperps_cat_mice cache.
+obs_eval_cat   <- train_data_cat %>% filter(!is.na(nperps_cat))
+eval_cls_counts <- table(obs_eval_cat$nperps_cat)
+eval_cls_weights <- 1 / eval_cls_counts
+eval_cls_weights <- eval_cls_weights / sum(eval_cls_weights)
+
+# Same parallel strategy as nperps_cat_mice: 4 workers x m=2 on the full
+# dataset, ibind to m=8.  mice.impute.rfcat is redefined inside the lambda
+# so its closure captures eval_cls_weights from the future's local frame.
+future::plan(future::multisession, workers = 4L)
+eval_cat_parts <- future.apply::future_lapply(
+  seq_len(4L),
+  function(i) {
+    assign("mice.impute.rfcat",
+           function(y, ry, x, wy = NULL, ...) {
+             mice::mice.impute.rf(y, ry, x, wy = wy, classwt = eval_cls_weights, ...)
+           },
+           envir = .GlobalEnv)
+    mice(eval_data_cat,
+         m               = 2L,
+         maxit           = 20,
+         method          = imp_meth_cat,
+         predictorMatrix = pred_mat_cat,
+         post            = post_cat,
+         seed            = 200L + i,
+         printFlag       = FALSE)
+  },
+  future.globals  = c("eval_data_cat", "imp_meth_cat", "pred_mat_cat",
+                      "post_cat", "eval_cls_weights"),
+  future.packages = "mice",
+  future.seed     = TRUE
+)
+future::plan(future::sequential)
+eval_imp_cat <- Reduce(mice::ibind, eval_cat_parts)
 
 modal_pred <- function(imp_obj, ids) {
   bind_rows(lapply(1:8, function(i)
